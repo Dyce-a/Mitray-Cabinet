@@ -43,12 +43,15 @@ export default function ConnectionHero({ subscription, trafficData }: Connection
 
   // The node the user's VPN client last connected to (Remnawave panel data via
   // a fork-only bot endpoint). Errors (e.g. unpatched backend → 404) simply
-  // fall back to the subscription's location list below.
+  // fall back to the subscription's location list below. Refetched on an
+  // interval so the online/offline state tracks the client while the
+  // dashboard stays open.
   const { data: connInfo } = useQuery({
     queryKey: ['connection-info', subscription.id],
     queryFn: () => subscriptionApi.getConnectionInfo(subscription.id),
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 55 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 
@@ -57,35 +60,64 @@ export default function ConnectionHero({ subscription, trafficData }: Connection
   const isUnlimited = trafficData?.is_unlimited ?? subscription.traffic_limit_gb === 0;
 
   const servers = subscription.servers ?? [];
-  const primary = servers[0];
   const locationsCount = servers.length || subscription.connected_squads?.length || 0;
 
-  const connectedNode = connInfo?.found ? connInfo.last_connected_node_name : null;
-  const flag =
-    getFlagEmoji(connectedNode ? connInfo?.last_connected_node_country : primary?.country_code) ||
-    '🌍';
-  const name = connectedNode || primary?.name || t('dashboard.hero.vpnActive', 'VPN активен');
-  const sub = connectedNode
-    ? t('dashboard.hero.currentServer', 'Твой сервер')
-    : locationsCount > 1
-      ? t('dashboard.hero.locationsAvailable', {
-          count: locationsCount,
-          defaultValue: '{{count}} локаций доступно',
-        })
-      : t('dashboard.hero.subscriptionLocation', 'Локация подписки');
+  // Bridged locations enter through an RU relay node before the foreign exit —
+  // Remnawave records that relay as lastConnectedNode. Never surface RU nodes;
+  // the true exit is the client's host choice, which the cabinet can't see.
+  const nodeHidden = (connInfo?.last_connected_node_country || '').toUpperCase() === 'RU';
+  const connectedNode = connInfo?.found && !nodeHidden ? connInfo.last_connected_node_name : null;
+
+  // Offline = the panel hasn't seen the client recently. Naive timestamps
+  // (no timezone suffix) are UTC — parse them as such, not as local time.
+  const onlineAtRaw = connInfo?.found ? connInfo.online_at : null;
+  const onlineAtMs = (() => {
+    if (!onlineAtRaw) return null;
+    const ts = new Date(
+      /[zZ]|[+-]\d{2}:?\d{2}$/.test(onlineAtRaw) ? onlineAtRaw : `${onlineAtRaw}Z`,
+    ).getTime();
+    return Number.isNaN(ts) ? null : ts;
+  })();
+  const isOffline = connInfo?.found
+    ? onlineAtMs === null || Date.now() - onlineAtMs > 3 * 60 * 1000
+    : false;
+
+  // No specific server name when the node is hidden (RU relay) or unknown —
+  // naming a country the user may not be exiting from is worse than a neutral
+  // "VPN active" (the France-vs-Finland confusion).
+  const flag = isOffline
+    ? getFlagEmoji('RU') || '🌍'
+    : (connectedNode && getFlagEmoji(connInfo?.last_connected_node_country)) || '🌍';
+  const name = isOffline
+    ? t('dashboard.hero.russia', 'Россия')
+    : connectedNode || t('dashboard.hero.vpnActive', 'VPN активен');
+  const sub = isOffline
+    ? t('dashboard.hero.notConnected', 'VPN не подключен')
+    : connectedNode
+      ? t('dashboard.hero.currentServer', 'Твой сервер')
+      : locationsCount > 1
+        ? t('dashboard.hero.locationsAvailable', {
+            count: locationsCount,
+            defaultValue: '{{count}} локаций доступно',
+          })
+        : t('dashboard.hero.subscriptionLocation', 'Локация подписки');
 
   return (
-    <div className="conn" ref={rootRef}>
+    <div className={isOffline ? 'conn off' : 'conn'} ref={rootRef}>
       <div className="conn-map" dangerouslySetInnerHTML={{ __html: worldMapSvg }} />
       <div className="conn-scrim" />
       <div className="conn-overlay">
         <div className="conn-top">
           <span className="conn-badge">
             <span className="cdot" />
-            {t('dashboard.hero.active', 'Активна')}
+            {isOffline
+              ? t('dashboard.hero.unprotected', 'Не защищено')
+              : t('dashboard.hero.active', 'Активна')}
           </span>
           <span className="conn-secure">
-            {t('dashboard.hero.encrypted', 'Шифрование включено')}
+            {isOffline
+              ? t('dashboard.hero.encryptionOff', 'Шифрование выключено')
+              : t('dashboard.hero.encrypted', 'Шифрование включено')}
           </span>
         </div>
 

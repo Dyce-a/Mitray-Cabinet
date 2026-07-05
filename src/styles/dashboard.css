@@ -499,6 +499,38 @@
   animation-play-state: paused;
 }
 
+/* «Без VPN» (.conn.off): панель давно не видела клиента (online_at несвежий) —
+   гасим «защищённую» графику: дуги/споты/флаги/замок скрыты, страны нейтральные,
+   бейдж и точка уходят в danger. Текст ставит ConnectionHero (Россия / Не
+   защищено / Шифрование выключено). */
+.mitray-dash .conn.off .conn-map .arc-base,
+.mitray-dash .conn.off .conn-map .arc-flow,
+.mitray-dash .conn.off .conn-map .arc-halo,
+.mitray-dash .conn.off .conn-map .spot,
+.mitray-dash .conn.off .conn-map .spot-ring,
+.mitray-dash .conn.off .conn-map .ru-glow,
+.mitray-dash .conn.off .conn-map .lock,
+.mitray-dash .conn.off .conn-map .flag,
+.mitray-dash .conn.off .conn-map .flag-bd,
+.mitray-dash .conn.off .conn-map .moscow {
+  display: none;
+}
+.mitray-dash .conn.off .conn-map .cc.on,
+.mitray-dash .conn.off .conn-map .cc.ru {
+  fill: var(--land);
+}
+.mitray-dash .conn.off .conn-badge {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+}
+.mitray-dash .conn.off .cdot {
+  background: var(--danger);
+}
+.mitray-dash .conn.off .cdot::after {
+  background: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
 @keyframes md-flow {
   to {
     stroke-dashoffset: -16;
