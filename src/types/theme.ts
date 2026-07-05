@@ -37,21 +37,22 @@ export const DEFAULT_ENABLED_THEMES: EnabledThemes = {
   light: true,
 };
 
-// Default theme colors
+// Default theme colors — Mitray VPN brand palette (redesign).
+// applyThemeColors() generates the full token ramps from these base colors.
 export const DEFAULT_THEME_COLORS: ThemeColors = {
-  accent: '#3b82f6',
+  accent: '#9B9DFF', // iris / periwinkle
 
-  darkBackground: '#0a0f1a',
-  darkSurface: '#0f172a',
-  darkText: '#f1f5f9',
-  darkTextSecondary: '#94a3b8',
+  darkBackground: '#0C0C12', // near-black canvas
+  darkSurface: '#101019',
+  darkText: '#F4F5FB',
+  darkTextSecondary: '#888CA0',
 
-  lightBackground: '#F7E7CE',
-  lightSurface: '#FEF9F0',
-  lightText: '#1F1A12',
-  lightTextSecondary: '#7D6B48',
+  lightBackground: '#EBECF5', // lavender-grey
+  lightSurface: '#F5F6FC',
+  lightText: '#15151D',
+  lightTextSecondary: '#565A6B',
 
-  success: '#22c55e',
+  success: '#3CE382', // traffic / unlock green
   warning: '#f59e0b',
   error: '#ef4444',
 };

@@ -22,22 +22,28 @@ export function ThemeColorsProvider({ children }: ThemeColorsProviderProps) {
   const { theme: platformTheme, capabilities } = usePlatform();
   const { isDark } = useTheme();
 
+  // During the redesign we want the Mitray brand palette to render locally even
+  // though the (production) backend still serves the legacy default colors.
+  // VITE_FORCE_BRAND_THEME=true (local .env) ignores backend colors and applies
+  // the brand defaults; production builds leave it unset → backend colors win.
+  const forceBrand = import.meta.env.VITE_FORCE_BRAND_THEME === 'true';
+  const activeColors = forceBrand ? DEFAULT_THEME_COLORS : colors || DEFAULT_THEME_COLORS;
+
   // Apply colors on mount and when they change
   useEffect(() => {
-    applyThemeColors(colors || DEFAULT_THEME_COLORS);
-  }, [colors]);
+    applyThemeColors(activeColors);
+  }, [activeColors]);
 
   // Sync Telegram header and bottom bar colors with theme
   const syncTelegramColors = useCallback(() => {
     if (!capabilities.hasThemeSync) return;
 
-    const themeColors = colors || DEFAULT_THEME_COLORS;
     // Use surface color for header/bottom bar to match app UI
-    const headerColor = isDark ? themeColors.darkSurface : themeColors.lightSurface;
+    const headerColor = isDark ? activeColors.darkSurface : activeColors.lightSurface;
 
     platformTheme.setHeaderColor(headerColor);
     platformTheme.setBottomBarColor(headerColor);
-  }, [capabilities.hasThemeSync, colors, isDark, platformTheme]);
+  }, [capabilities.hasThemeSync, activeColors, isDark, platformTheme]);
 
   // Apply Telegram colors when theme or colors change
   useEffect(() => {

@@ -17,6 +17,7 @@ import { getSafeRedirectPath } from '../utils/safeRedirect';
 import { openPaymentUrl } from '../utils/openPaymentUrl';
 import { copyToClipboard } from '@/utils/clipboard';
 import {
+  BackIcon,
   CardIcon,
   CheckIcon,
   CopyIcon,
@@ -276,9 +277,12 @@ export default function TopUpAmount() {
     },
   });
 
-  // Auto-focus input (only on desktop — mobile keyboard hides bottom nav)
+  // Auto-focus input (only on desktop — focusing on any mobile viewport sets
+  // isKeyboardOpen in AppShell and hides the bottom tab bar, so gate by the
+  // same lg breakpoint the bar uses, not just by Telegram platform)
   useEffect(() => {
     if (platform === 'telegram') return;
+    if (!window.matchMedia('(min-width: 1024px)').matches) return;
     const timer = setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
@@ -414,6 +418,17 @@ export default function TopUpAmount() {
       initial="initial"
       animate="animate"
     >
+      {/* Back to method selection / previous screen */}
+      <motion.button
+        variants={staggerItem}
+        type="button"
+        onClick={handleNavigateBack}
+        className="flex items-center gap-2 rounded-xl py-1 pr-2 text-sm font-medium text-dark-400 transition-colors duration-200 hover:text-dark-100"
+      >
+        <BackIcon className="h-4 w-4" />
+        <span>{t('common.back')}</span>
+      </motion.button>
+
       {/* Header icon and method */}
       <motion.div variants={staggerItem} className="flex items-center gap-4 pb-1">
         <div

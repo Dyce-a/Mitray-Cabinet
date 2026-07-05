@@ -8,9 +8,17 @@ import { infoPagesApi } from '../api/infoPages';
 import { promoApi, LoyaltyTierInfo } from '../api/promo';
 import type { FaqItem, ReplacesTab } from '../api/infoPages';
 import { DocumentIcon, InfoIcon, QuestionIcon, ShieldIcon, StarIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import '../styles/info.css';
 
 const ChevronIcon = ({ expanded }: { expanded: boolean }) => (
   <PiCaretDown className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+);
+
+const Spinner = () => (
+  <div className="loader">
+    <div className="spin" />
+  </div>
 );
 
 const BUILTIN_TABS = new Set<string>(['faq', 'rules', 'privacy', 'offer', 'loyalty']);
@@ -230,14 +238,16 @@ const formatContent = (content: string): string => {
   return sanitizeHtml(result);
 };
 
-// --- FAQ Accordion for tab replacements ---
+// --- FAQ accordion item (prototype-styled, smooth measured-height animation) ---
 
-function ReplacementFaqItem({
-  item,
+function AccordionItem({
+  question,
+  answerHtml,
   isOpen,
   onToggle,
 }: {
-  item: FaqItem;
+  question: string;
+  answerHtml: string;
   isOpen: boolean;
   onToggle: () => void;
 }) {
@@ -248,7 +258,7 @@ function ReplacementFaqItem({
     if (contentRef.current) {
       setHeight(isOpen ? contentRef.current.scrollHeight : 0);
     }
-  }, [isOpen]);
+  }, [isOpen, answerHtml]);
 
   useEffect(() => {
     if (!isOpen || !contentRef.current) return;
@@ -259,29 +269,16 @@ function ReplacementFaqItem({
     return () => observer.disconnect();
   }, [isOpen]);
 
-  const sanitizedAnswer = useMemo(() => sanitizeRichHtml(item.a), [item.a]);
-
   return (
-    <div className="overflow-hidden rounded-xl border border-dark-700 bg-dark-800/50 transition-all hover:border-dark-600">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex min-h-[52px] w-full items-center justify-between gap-3 px-5 py-4 text-left"
-        aria-expanded={isOpen}
-      >
-        <span className="text-sm font-medium text-dark-100 sm:text-base">{item.q}</span>
-        <ChevronIcon expanded={isOpen} />
+    <div className={cn('faq', isOpen && 'open')}>
+      <button type="button" onClick={onToggle} className="faq-q" aria-expanded={isOpen}>
+        <span>{question}</span>
+        <span className="chev">
+          <ChevronIcon expanded={isOpen} />
+        </span>
       </button>
-      <div
-        style={{ height }}
-        className="overflow-hidden transition-[height] duration-300 ease-in-out"
-      >
-        <div ref={contentRef} className="border-t border-dark-700/50 px-5 pb-4 pt-3">
-          <div
-            className="prose prose-sm max-w-none text-dark-300"
-            dangerouslySetInnerHTML={{ __html: sanitizedAnswer }}
-          />
-        </div>
+      <div className="faq-a" style={{ height }}>
+        <div ref={contentRef} className="inner" dangerouslySetInnerHTML={{ __html: answerHtml }} />
       </div>
     </div>
   );
@@ -295,13 +292,14 @@ function ReplacementFaqView({ items }: { items: FaqItem[] }) {
   }, []);
 
   return (
-    <div className="space-y-2">
+    <div className="faq-list">
       {items.map((item, index) => {
         const key = `${index}-${item.q.slice(0, 50)}`;
         return (
-          <ReplacementFaqItem
+          <AccordionItem
             key={key}
-            item={item}
+            question={item.q}
+            answerHtml={sanitizeRichHtml(item.a)}
             isOpen={openKey === key}
             onToggle={() => handleToggle(key)}
           />
@@ -316,6 +314,23 @@ export default function Info() {
   const [activeTab, setActiveTab] = useState<string>('faq');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const locale = i18n.language.split('-')[0];
+
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    // Double rAF: with a warm query cache the page renders in its first frame
+    // and a single rAF fires BEFORE that frame paints — .in would land in the
+    // initial paint and the stagger would have nothing to animate from.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   // Fetch tab replacements
   const { data: tabReplacements, isError: replacementsError } = useQuery({
@@ -468,31 +483,27 @@ export default function Info() {
 
   const renderInfoPageContent = () => {
     if (infoPageLoading) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-        </div>
-      );
+      return <Spinner />;
     }
 
     if (!infoPage) {
-      return <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>;
+      return <div className="empty">{t('info.noContent')}</div>;
     }
 
     if (infoPage.page_type === 'faq') {
       if (infoPageFaqItems.length === 0) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noFaq')}</div>;
+        return <div className="empty">{t('info.noFaq')}</div>;
       }
       return <ReplacementFaqView items={infoPageFaqItems} />;
     }
 
     if (!infoPageHtml) {
-      return <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>;
+      return <div className="empty">{t('info.noContent')}</div>;
     }
 
     return (
-      <div className="bento-card prose prose-invert max-w-none">
-        <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: infoPageHtml }} />
+      <div className="doc">
+        <div className="doc-body" dangerouslySetInnerHTML={{ __html: infoPageHtml }} />
       </div>
     );
   };
@@ -505,11 +516,7 @@ export default function Info() {
 
     // Show spinner while tab replacements are loading (prevents flash of wrong content)
     if (!replacementsLoaded) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-        </div>
-      );
+      return <Spinner />;
     }
 
     // Built-in tab replaced by an InfoPage
@@ -519,34 +526,23 @@ export default function Info() {
 
     if (activeTab === 'faq') {
       if (faqLoading) {
-        return (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-          </div>
-        );
+        return <Spinner />;
       }
 
       if (!faqPages || faqPages.length === 0) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noFaq')}</div>;
+        return <div className="empty">{t('info.noFaq')}</div>;
       }
 
       return (
-        <div className="space-y-2">
+        <div className="faq-list">
           {faqPages.map((faq: FaqPage) => (
-            <div key={faq.id} className="bento-card overflow-hidden p-0">
-              <button
-                onClick={() => toggleFaq(faq.id)}
-                className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-dark-800/50"
-              >
-                <span className="font-medium">{faq.title}</span>
-                <ChevronIcon expanded={expandedFaq === faq.id} />
-              </button>
-              {expandedFaq === faq.id && (
-                <div className="prose prose-invert max-w-none px-4 pb-4 text-dark-300">
-                  <div dangerouslySetInnerHTML={{ __html: formatContent(faq.content) }} />
-                </div>
-              )}
-            </div>
+            <AccordionItem
+              key={faq.id}
+              question={faq.title}
+              answerHtml={formatContent(faq.content)}
+              isOpen={expandedFaq === faq.id}
+              onToggle={() => toggleFaq(faq.id)}
+            />
           ))}
         </div>
       );
@@ -554,25 +550,21 @@ export default function Info() {
 
     if (activeTab === 'rules') {
       if (rulesLoading) {
-        return (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-          </div>
-        );
+        return <Spinner />;
       }
 
       if (!rules?.content) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>;
+        return <div className="empty">{t('info.noContent')}</div>;
       }
 
       return (
-        <div className="bento-card prose prose-invert max-w-none">
+        <div className="doc">
           <div
-            className="overflow-x-auto"
+            className="doc-body"
             dangerouslySetInnerHTML={{ __html: formatContent(rules.content) }}
           />
           {rules.updated_at && (
-            <p className="mt-6 border-t border-dark-700 pt-4 text-sm text-dark-400">
+            <p className="doc-meta">
               {t('info.updatedAt')}: {new Date(rules.updated_at).toLocaleDateString()}
             </p>
           )}
@@ -582,25 +574,21 @@ export default function Info() {
 
     if (activeTab === 'privacy') {
       if (privacyLoading) {
-        return (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-          </div>
-        );
+        return <Spinner />;
       }
 
       if (!privacy?.content) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>;
+        return <div className="empty">{t('info.noContent')}</div>;
       }
 
       return (
-        <div className="bento-card prose prose-invert max-w-none">
+        <div className="doc">
           <div
-            className="overflow-x-auto"
+            className="doc-body"
             dangerouslySetInnerHTML={{ __html: formatContent(privacy.content) }}
           />
           {privacy.updated_at && (
-            <p className="mt-6 border-t border-dark-700 pt-4 text-sm text-dark-400">
+            <p className="doc-meta">
               {t('info.updatedAt')}: {new Date(privacy.updated_at).toLocaleDateString()}
             </p>
           )}
@@ -610,25 +598,21 @@ export default function Info() {
 
     if (activeTab === 'offer') {
       if (offerLoading) {
-        return (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-          </div>
-        );
+        return <Spinner />;
       }
 
       if (!offer?.content) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>;
+        return <div className="empty">{t('info.noContent')}</div>;
       }
 
       return (
-        <div className="bento-card prose prose-invert max-w-none">
+        <div className="doc">
           <div
-            className="overflow-x-auto"
+            className="doc-body"
             dangerouslySetInnerHTML={{ __html: formatContent(offer.content) }}
           />
           {offer.updated_at && (
-            <p className="mt-6 border-t border-dark-700 pt-4 text-sm text-dark-400">
+            <p className="doc-meta">
               {t('info.updatedAt')}: {new Date(offer.updated_at).toLocaleDateString()}
             </p>
           )}
@@ -638,15 +622,11 @@ export default function Info() {
 
     if (activeTab === 'loyalty') {
       if (loyaltyLoading) {
-        return (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-          </div>
-        );
+        return <Spinner />;
       }
 
       if (!loyaltyData || loyaltyData.tiers.length === 0) {
-        return <div className="py-8 text-center text-dark-400">{t('info.noLoyaltyTiers')}</div>;
+        return <div className="empty">{t('info.noLoyaltyTiers')}</div>;
       }
 
       const formatCurrency = (amount: number) => {
@@ -658,26 +638,17 @@ export default function Info() {
         }).format(amount);
       };
 
+      const tierClass = (tier: LoyaltyTierInfo) =>
+        tier.is_current ? 'cur' : tier.is_achieved ? 'done' : 'lock';
+
       const getStatusBadge = (tier: LoyaltyTierInfo) => {
         if (tier.is_current) {
-          return (
-            <span className="rounded-full bg-accent-500/20 px-2 py-1 text-xs font-medium text-accent-400">
-              {t('info.statusCurrent')}
-            </span>
-          );
+          return <span className="loy-badge cur">{t('info.statusCurrent')}</span>;
         }
         if (tier.is_achieved) {
-          return (
-            <span className="rounded-full bg-success-500/20 px-2 py-1 text-xs font-medium text-success-400">
-              {t('info.statusAchieved')}
-            </span>
-          );
+          return <span className="loy-badge done">{t('info.statusAchieved')}</span>;
         }
-        return (
-          <span className="rounded-full bg-dark-600 px-2 py-1 text-xs font-medium text-dark-400">
-            {t('info.statusLocked')}
-          </span>
-        );
+        return <span className="loy-badge lock">{t('info.statusLocked')}</span>;
       };
 
       const hasAnyDiscount = (tier: LoyaltyTierInfo) => {
@@ -690,30 +661,26 @@ export default function Info() {
       };
 
       return (
-        <div className="space-y-6">
-          {/* Progress Card */}
-          <div className="bento-card p-5">
-            <h3 className="mb-4 text-lg font-semibold text-dark-50">{t('info.yourProgress')}</h3>
+        <div className="loy">
+          {/* Progress card */}
+          <div className="loy-prog">
+            <h3>{t('info.yourProgress')}</h3>
 
-            <div className="mb-4 grid grid-cols-2 gap-4">
-              <div className="rounded-xl bg-dark-800/50 p-3">
-                <div className="mb-1 text-xs text-dark-400">{t('info.totalSpent')}</div>
-                <div className="truncate text-base font-bold text-dark-50 sm:text-lg">
-                  {formatCurrency(loyaltyData.current_spent_rubles)}
-                </div>
+            <div className="loy-stats">
+              <div className="loy-stat">
+                <div className="k">{t('info.totalSpent')}</div>
+                <div className="v">{formatCurrency(loyaltyData.current_spent_rubles)}</div>
               </div>
-              <div className="rounded-xl bg-dark-800/50 p-3">
-                <div className="mb-1 text-xs text-dark-400">{t('info.currentStatus')}</div>
-                <div className="truncate text-base font-bold text-accent-400 sm:text-lg">
-                  {loyaltyData.current_tier_name || '-'}
-                </div>
+              <div className="loy-stat">
+                <div className="k">{t('info.currentStatus')}</div>
+                <div className="v accent">{loyaltyData.current_tier_name || '-'}</div>
               </div>
             </div>
 
             {/* Progress bar to next tier */}
             {loyaltyData.next_tier_name && loyaltyData.next_tier_threshold_rubles ? (
               <div>
-                <div className="mb-2 flex flex-col gap-1 text-xs text-dark-400 sm:flex-row sm:justify-between">
+                <div className="loy-next">
                   <span>
                     {t('info.nextStatus')}: {loyaltyData.next_tier_name}
                   </span>
@@ -727,91 +694,67 @@ export default function Info() {
                     )}
                   </span>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-dark-700">
+                <div className="loy-bar">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-400 transition-all duration-500"
+                    className="loy-bar-fill"
                     style={{ width: `${Math.min(100, loyaltyData.progress_percent)}%` }}
                   />
                 </div>
-                <div className="mt-1 text-right text-xs text-dark-400">
-                  {loyaltyData.progress_percent.toFixed(1)}%
-                </div>
+                <div className="loy-pct">{loyaltyData.progress_percent.toFixed(1)}%</div>
               </div>
             ) : (
-              <div className="py-2 text-center font-medium text-success-400">
-                {t('info.allStatusesAchieved')}
-              </div>
+              <div className="loy-done">{t('info.allStatusesAchieved')}</div>
             )}
           </div>
 
-          {/* Tiers List */}
-          <div className="space-y-3">
+          {/* Tiers list */}
+          <div className="loy-tiers">
             {loyaltyData.tiers.map((tier) => (
-              <div
-                key={tier.id}
-                className={`bento-card p-4 transition-all ${
-                  tier.is_current
-                    ? 'bg-accent-500/5 ring-2 ring-accent-500/50'
-                    : tier.is_achieved
-                      ? 'bg-success-500/5'
-                      : 'opacity-70'
-                }`}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                        tier.is_current
-                          ? 'bg-accent-500/20 text-accent-400'
-                          : tier.is_achieved
-                            ? 'bg-success-500/20 text-success-400'
-                            : 'bg-dark-700 text-dark-400'
-                      }`}
-                    >
+              <div key={tier.id} className={cn('loy-tier', tierClass(tier))}>
+                <div className="loy-tier-h">
+                  <div className="loy-tier-l">
+                    <div className="loy-ic">
                       <StarIcon />
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="truncate font-semibold text-dark-50">{tier.name}</h4>
-                      <p className="text-xs text-dark-400">
+                    <div className="loy-tier-nm">
+                      <b>{tier.name}</b>
+                      <p>
                         {t('info.threshold')}: {formatCurrency(tier.threshold_rubles)}
                       </p>
                     </div>
                   </div>
-                  <span className="shrink-0">{getStatusBadge(tier)}</span>
+                  {getStatusBadge(tier)}
                 </div>
 
                 {/* Discounts */}
                 {hasAnyDiscount(tier) ? (
-                  <div className="rounded-xl bg-dark-800/50 p-3">
-                    <div className="mb-2 text-xs text-dark-400">{t('info.discounts')}:</div>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="loy-disc">
+                    <div className="dt">{t('info.discounts')}:</div>
+                    <div className="loy-chips">
                       {tier.server_discount_percent > 0 && (
-                        <span className="rounded-lg bg-dark-700 px-2 py-1 text-xs text-dark-200">
+                        <span className="loy-chip">
                           {t('info.serverDiscount')}: -{tier.server_discount_percent}%
                         </span>
                       )}
                       {tier.traffic_discount_percent > 0 && (
-                        <span className="rounded-lg bg-dark-700 px-2 py-1 text-xs text-dark-200">
+                        <span className="loy-chip">
                           {t('info.trafficDiscount')}: -{tier.traffic_discount_percent}%
                         </span>
                       )}
                       {tier.device_discount_percent > 0 && (
-                        <span className="rounded-lg bg-dark-700 px-2 py-1 text-xs text-dark-200">
+                        <span className="loy-chip">
                           {t('info.deviceDiscount')}: -{tier.device_discount_percent}%
                         </span>
                       )}
                       {Object.entries(tier.period_discounts).map(([days, percent]) => (
-                        <span
-                          key={days}
-                          className="rounded-lg bg-dark-700 px-2 py-1 text-xs text-dark-200"
-                        >
+                        <span key={days} className="loy-chip">
                           {t('info.periodDiscount', { days })}: -{percent}%
                         </span>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs italic text-dark-500">{t('info.noDiscounts')}</div>
+                  <div className="loy-nodisc">{t('info.noDiscounts')}</div>
                 )}
               </div>
             ))}
@@ -824,32 +767,32 @@ export default function Info() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <InfoIcon className="h-6 w-6" />
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('info.title')}</h1>
+    <div className={cn('mitray-info space-y-5', revealed && 'in')}>
+      <div className="phead">
+        <h1>
+          <span className="hi">
+            <InfoIcon className="h-[26px] w-[26px]" />
+          </span>
+          {t('info.title')}
+        </h1>
       </div>
 
       {/* Tabs */}
-      <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible">
+      <div className="tabs reveal d1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-accent-500 text-on-accent'
-                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-            }`}
+            className={cn('tab', activeTab === tab.id && 'on')}
           >
-            {tab.emoji ? <span className="text-base">{tab.emoji}</span> : <tab.icon />}
-            <span className="max-w-[140px] truncate">{tab.label}</span>
+            {tab.emoji ? <span className="emoji">{tab.emoji}</span> : <tab.icon />}
+            <span className="lbl">{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Content */}
-      {renderContent()}
+      <div className="reveal d2">{renderContent()}</div>
     </div>
   );
 }

@@ -36,8 +36,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary]', error, errorInfo);
 
-    // Auto-reload on chunk load failures (stale deploy)
-    if (isChunkLoadError(error)) {
+    // Auto-reload on chunk load failures (stale deploy). DEV is excluded: there
+    // a chunk error is a transient Vite recompile, and the sessionStorage guard
+    // survives a refresh — so it would wedge the page until the 30s window
+    // expires (the "only incognito fixes it" symptom). lazyWithRetry already
+    // retries the import in dev; here we just show the recoverable fallback.
+    if (!import.meta.env.DEV && isChunkLoadError(error)) {
       const reloadKey = 'chunk_reload_ts';
       const lastReload = Number(sessionStorage.getItem(reloadKey) || '0');
       const now = Date.now();

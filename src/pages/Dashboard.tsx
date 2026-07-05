@@ -12,16 +12,20 @@ import { wheelApi } from '../api/wheel';
 import Onboarding, { useOnboarding } from '../components/Onboarding';
 import PromoOffersSection from '../components/PromoOffersSection';
 import NewsSection from '../components/news/NewsSection';
-import SubscriptionCardActive from '../components/dashboard/SubscriptionCardActive';
 import SubscriptionCardExpired from '../components/dashboard/SubscriptionCardExpired';
 import TrialOfferCard from '../components/dashboard/TrialOfferCard';
 import StatsGrid from '../components/dashboard/StatsGrid';
 import { giftApi } from '../api/gift';
 import { promoApi } from '../api/promo';
 import PendingGiftCard from '../components/dashboard/PendingGiftCard';
+import DashboardCockpit from '../components/dashboard/DashboardCockpit';
 import SubscriptionListCard from '../components/subscription/SubscriptionListCard';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useIntroStore, introWillPlay } from '../store/intro';
 import { API } from '../config/constants';
+import { cn } from '@/lib/utils';
 import { ChevronRightIcon, StarIcon } from '@/components/icons';
+import '../styles/dashboard.css';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -33,6 +37,44 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const blockingType = useBlockingStore((state) => state.blockingType);
   const [trialError, setTrialError] = useState<string | null>(null);
+  const { referralEnabled } = useFeatureFlags();
+
+  // Cockpit reveal stagger — add `.in` to the root after first paint so the
+  // hero + ribbon rise in (CSS handles the transition; see dashboard.css).
+  // On the first cabinet entry the intro overlay is playing on top: hold the
+  // reveal so the cockpit rises in sync with the logo landing in the header
+  // (IntroLoader flips useIntroStore.revealed when the flight starts).
+  const [introPending] = useState(() => introWillPlay());
+  const introRevealed = useIntroStore((s) => s.revealed);
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (introPending) return; // released by the intro (see effect below)
+    // Double rAF on purpose: with a warm query cache (returning from another
+    // tab) the whole cockpit renders in the very first frame, and a single rAF
+    // fires BEFORE that frame paints — `.in` landed in the initial paint and
+    // the stagger had nothing to animate from (cards popped in abruptly).
+    // One frame must paint with the cards still hidden, THEN `.in` goes on.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, [introPending]);
+  useEffect(() => {
+    if (!introPending) return;
+    if (introRevealed) {
+      setRevealed(true);
+      return;
+    }
+    // Safety net: never leave the dashboard hidden if the intro never signals.
+    const safety = setTimeout(() => setRevealed(true), 8000);
+    return () => clearTimeout(safety);
+  }, [introPending, introRevealed]);
 
   // Refresh user data on mount
   useEffect(() => {
@@ -204,13 +246,35 @@ export default function Dashboard() {
     (s) => !s.is_trial && (s.status === 'active' || s.status === 'limited'),
   );
 
-  // Show onboarding for new users after data loads
+  // Cockpit shows for a healthy single active subscription — the same branch
+  // that used to render <SubscriptionCardActive>. When it's on, the standalone
+  // StatsGrid (balance/referrals) and wheel banner are folded into the cockpit's
+  // side-grid + ribbon, so they're hidden below to avoid duplication.
+  const cockpitSubscription =
+    !isMultiTariff &&
+    !subLoading &&
+    subscription &&
+    !subscription.is_expired &&
+    subscription.status !== 'disabled' &&
+    !subscription.is_limited
+      ? subscription
+      : null;
+
+  // Tell the intro overlay when the dashboard's primary data is in, so the
+  // signature loader stops looping and flies to the header (see IntroLoader).
+  const introDataReady = multiSubData !== undefined && (isMultiTariff || !subLoading);
   useEffect(() => {
-    if (!isOnboardingCompleted && !subLoading && !refLoading && !blockingType) {
+    if (introDataReady) useIntroStore.getState().setDataReady();
+  }, [introDataReady]);
+
+  // Show onboarding for new users after data loads — but not until the page is
+  // actually revealed, so it can't pop over the intro overlay.
+  useEffect(() => {
+    if (!isOnboardingCompleted && revealed && !subLoading && !refLoading && !blockingType) {
       const timer = setTimeout(() => setShowOnboarding(true), 500);
       return () => clearTimeout(timer);
     }
-  }, [isOnboardingCompleted, subLoading, refLoading, blockingType]);
+  }, [isOnboardingCompleted, revealed, subLoading, refLoading, blockingType]);
 
   const onboardingSteps = useMemo(() => {
     type Placement = 'top' | 'bottom' | 'left' | 'right';
@@ -252,25 +316,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={cn('mitray-dash space-y-6', revealed && 'in')}>
       {/* Header */}
-      <div data-onboarding="welcome">
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
-          {t('dashboard.welcome', { name: displayName(user) })}
-        </h1>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <p className="text-dark-400">{t('dashboard.yourSubscription')}</p>
+      <div className="welcome" data-onboarding="welcome">
+        <h1>{t('dashboard.welcome', { name: displayName(user) })}</h1>
+        <div className="sub">
+          <span>{t('dashboard.yourSubscription')}</span>
           {promoGroupData?.group_name && (
-            <span
-              className="inline-flex max-w-[160px] items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-              style={{
-                background: 'rgba(var(--color-accent-400), 0.1)',
-                border: '1px solid rgba(var(--color-accent-400), 0.2)',
-                color: 'rgb(var(--color-accent-400))',
-              }}
-            >
-              <StarIcon filled className="h-2.5 w-2.5 shrink-0" />
-              <span className="truncate">{promoGroupData.group_name}</span>
+            <span className="badge">
+              <StarIcon filled className="h-3 w-3 shrink-0" />
+              <span>{promoGroupData.group_name}</span>
             </span>
           )}
         </div>
@@ -352,12 +407,15 @@ export default function Dashboard() {
               balanceRubles={balanceData?.balance_rubles ?? 0}
             />
           ) : subscription ? (
-            <SubscriptionCardActive
+            <DashboardCockpit
               subscription={subscription}
               trafficData={trafficData}
-              refreshTrafficMutation={refreshTrafficMutation}
-              trafficRefreshCooldown={trafficRefreshCooldown}
               connectedDevices={devicesData?.total ?? 0}
+              balanceRubles={balanceData?.balance_rubles ?? 0}
+              referralCount={referralInfo?.total_referrals ?? 0}
+              earningsRubles={referralInfo?.available_balance_rubles ?? 0}
+              wheelEnabled={wheelConfig?.is_enabled ?? false}
+              referralEnabled={!!referralEnabled}
             />
           ) : null}
         </>
@@ -392,16 +450,18 @@ export default function Dashboard() {
       {/* Promo Offers */}
       <PromoOffersSection />
 
-      {/* Stats Grid */}
-      <StatsGrid
-        balanceRubles={balanceData?.balance_rubles || 0}
-        referralCount={referralInfo?.total_referrals || 0}
-        earningsRubles={referralInfo?.available_balance_rubles || 0}
-        refLoading={refLoading}
-      />
+      {/* Stats Grid — folded into the cockpit side-grid when the cockpit is shown */}
+      {!cockpitSubscription && (
+        <StatsGrid
+          balanceRubles={balanceData?.balance_rubles || 0}
+          referralCount={referralInfo?.total_referrals || 0}
+          earningsRubles={referralInfo?.available_balance_rubles || 0}
+          refLoading={refLoading}
+        />
+      )}
 
-      {/* Fortune Wheel Banner */}
-      {wheelConfig?.is_enabled && (
+      {/* Fortune Wheel Banner — folded into the cockpit ribbon when the cockpit is shown */}
+      {!cockpitSubscription && wheelConfig?.is_enabled && (
         <Link to="/wheel" className="bento-card-hover group flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="text-3xl">🎰</span>

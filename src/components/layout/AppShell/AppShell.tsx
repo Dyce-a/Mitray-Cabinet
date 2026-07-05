@@ -13,7 +13,6 @@ import { useBranding } from '@/hooks/useBranding';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { themeColorsApi } from '@/api/themeColors';
-import { isLogoPreloaded } from '@/api/branding';
 import { cn } from '@/lib/utils';
 
 import WebSocketNotifications from '@/components/WebSocketNotifications';
@@ -39,7 +38,10 @@ import {
 
 import { MobileBottomNav } from './MobileBottomNav';
 import { AppHeader } from './AppHeader';
-import { BackgroundRenderer } from '@/components/backgrounds/BackgroundRenderer';
+import { BrandBackground } from '@/components/backgrounds/BrandBackground';
+import { IntroLoader } from '@/components/intro/IntroLoader';
+import '@/styles/app-shell.css';
+import '@/styles/mobile-shell.css';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -57,7 +59,7 @@ export function AppShell({ children }: AppShellProps) {
   const { toggleTheme, isDark } = useTheme();
 
   // Extracted hooks
-  const { appName, logoLetter, hasCustomLogo, logoUrl } = useBranding();
+  const { appName } = useBranding();
   const { referralEnabled, wheelEnabled, hasContests, hasPolls, giftEnabled } = useFeatureFlags();
   useScrollRestoration();
 
@@ -146,27 +148,12 @@ export function AppShell({ children }: AppShellProps) {
         to={path}
         onClick={handleNavClick}
         aria-label={label}
-        className={cn(
-          'relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors duration-200',
-          active
-            ? admin
-              ? 'text-warning-300'
-              : 'text-dark-50'
-            : admin
-              ? 'text-warning-500/70 hover:bg-warning-500/10 hover:text-warning-300'
-              : 'text-dark-400 hover:bg-dark-800/60 hover:text-dark-100',
-        )}
+        className={cn('nav-item shrink-0', active && 'on', admin && 'nav-admin')}
       >
         {active && (
           <motion.span
             layoutId="desktop-nav-active"
-            className={cn(
-              // Подсветка-пилюля активного пункта — «приподнята» над треком капсулы
-              'absolute inset-0 rounded-full shadow-sm',
-              admin
-                ? 'bg-warning-500/15 ring-1 ring-warning-500/20'
-                : 'bg-dark-700/80 ring-1 ring-dark-600/40',
-            )}
+            className="nav-pill absolute inset-0"
             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
         )}
@@ -180,8 +167,13 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="min-h-viewport">
-      {/* Animated background renders via portal on document.body at z-index: -1 */}
-      <BackgroundRenderer />
+      {/* Login → dashboard intro: signature loader that flies into the header
+          brand slot on first cabinet entry (see IntroLoader / intro.css). */}
+      <IntroLoader />
+
+      {/* Brand background (dark canvas + soft blobs) — portal on document.body,
+          matches the design-lab prototypes; replaces the animated aurora/beams. */}
+      <BrandBackground />
 
       {/* Global components */}
       <WebSocketNotifications />
@@ -189,66 +181,44 @@ export function AppShell({ children }: AppShellProps) {
       <SuccessNotificationModal />
       <PromptDialogHost />
 
-      {/* Desktop Header */}
-      <header className="fixed left-0 right-0 top-0 z-50 hidden border-b border-dark-800/50 bg-dark-950/95 lg:block">
-        {/* 3-зонный grid: лого | капсула | действия. Колонки 1fr_auto_1fr держат
-            капсулу строго по центру вьюпорта НЕЗАВИСИМО от ширины лого/действий,
-            а действия — у правого края. Поэтому ничего не «скачет» при переходах
-            (в т.ч. в админку): смена ширины в одной зоне не двигает другие. */}
-        <div className="mx-auto grid h-14 max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-6">
-          {/* Logo */}
+      {/* Desktop Header — redesign shell (see app-shell.css). Layout: brand |
+          nav capsule | spacer | actions. Nav logic + the framer-motion active
+          pill are unchanged; only the look is the Mitray prototype. */}
+      <header className="mitray-shell fixed left-0 right-0 top-0 z-50 hidden lg:block">
+        <div className="hbar">
+          {/* Logo (Mitray / VPN wordmark) */}
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2.5 justify-self-start"
+            className="flex-none"
             onClick={handleNavClick}
+            aria-label={appName || 'Mitray VPN'}
           >
-            <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-dark-800">
-              <span
-                className={cn(
-                  'absolute text-sm font-bold text-accent-400 transition-opacity duration-200',
-                  hasCustomLogo && isLogoPreloaded() ? 'opacity-0' : 'opacity-100',
-                )}
-              >
-                {logoLetter}
-              </span>
-              {hasCustomLogo && logoUrl && (
-                <img
-                  src={logoUrl}
-                  alt={appName || 'Logo'}
-                  className={cn(
-                    'absolute h-full w-full object-contain transition-opacity duration-200',
-                    isLogoPreloaded() ? 'opacity-100' : 'opacity-0',
-                  )}
-                />
-              )}
-            </div>
-            <span className="text-base font-semibold text-dark-100">{appName}</span>
+            <svg className="brand-logo" viewBox="0 0 600 320" aria-label="Mitray VPN">
+              <text className="bl1" x="300" y="150" textAnchor="middle" fontSize="150">
+                Mitray
+              </text>
+              <text className="bl2" x="304" y="286" textAnchor="middle" fontSize="120">
+                VPN
+              </text>
+            </svg>
           </Link>
 
-          {/* Navigation — единая «капсула» (segmented control): все пункты видны
-              всегда, без скролла/сжатия/сворачивания. Центрируется средней
-              колонкой grid (justify-self-center), а не auto-margin'ами. */}
-          <nav className="flex items-center gap-0.5 justify-self-center rounded-full border border-dark-800/70 bg-dark-900/50 p-1 shadow-sm backdrop-blur-sm">
+          {/* Navigation capsule */}
+          <nav className="nav">
             {desktopNav.map((item) => renderNavLink(item.path, item.label, item.icon))}
-            {isAdmin && (
-              <>
-                <div className="mx-1 h-5 w-px shrink-0 bg-dark-700/60" />
-                {renderNavLink('/admin', t('admin.nav.title'), ShieldIcon, true)}
-              </>
-            )}
+            {isAdmin && renderNavLink('/admin', t('admin.nav.title'), ShieldIcon, true)}
           </nav>
 
-          {/* Right side actions — правая колонка grid, прижата к краю, не сжимается */}
-          <div className="flex shrink-0 items-center gap-2 justify-self-end">
+          <div className="spacer" />
+
+          {/* Actions */}
+          <div className="hact">
             <button
               onClick={() => {
                 haptic.impact('light');
                 toggleTheme();
               }}
-              className={cn(
-                'rounded-xl border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-colors duration-200 hover:bg-dark-700 hover:text-accent-400',
-                !canToggleTheme && 'hidden',
-              )}
+              className={cn('iconbtn', !canToggleTheme && 'hidden')}
               aria-label={
                 isDark ? t('theme.light') || 'Light mode' : t('theme.dark') || 'Dark mode'
               }
@@ -263,7 +233,7 @@ export function AppShell({ children }: AppShellProps) {
                 haptic.impact('light');
                 logout();
               }}
-              className="rounded-xl border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-colors duration-200 hover:bg-dark-700 hover:text-accent-400"
+              className="iconbtn"
               title={t('nav.logout')}
             >
               <LogoutIcon className="h-5 w-5" />
@@ -289,14 +259,15 @@ export function AppShell({ children }: AppShellProps) {
         giftEnabled={giftEnabled}
       />
 
-      {/* Desktop spacer */}
-      <div className="hidden h-14 lg:block" />
+      {/* Desktop spacer (mobile header is sticky — occupies flow, no spacer needed) */}
+      <div className="hidden h-[66px] lg:block" />
 
-      {/* Mobile spacer */}
-      <div className="lg:hidden" style={{ height: headerHeight }} />
-
-      {/* Main content */}
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-28 lg:px-6 lg:pb-8">{children}</main>
+      {/* Main content — 1200px matches the redesign prototypes' .wrap width
+          (was max-w-6xl / 1152px, which rendered the ported screens ~4% narrow).
+          Mobile bottom padding clears the floating tab-bar + safe area. */}
+      <main className="mx-auto max-w-[1200px] px-4 py-6 pb-[calc(104px+env(safe-area-inset-bottom,0px))] lg:px-6 lg:pb-8">
+        {children}
+      </main>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav

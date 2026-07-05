@@ -1,0 +1,138 @@
+/* ============================================================================
+   Mitray VPN — desktop app shell (redesign). Ported from design-lab/dashboard.html
+   (.shell / header / .nav / .nav-pill / .iconbtn). Scoped to .mitray-shell.
+   Theme-adaptive colors come from the app design tokens (dark-* / accent-*,
+   which the .light class remaps), so it auto-inverts between dark and light.
+   Navigation logic + the framer-motion active pill stay in AppShell.tsx — this
+   only restyles them.
+   ========================================================================== */
+
+.mitray-shell {
+  --panel: rgba(255, 255, 255, 0.04);
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, rgb(var(--color-dark-950)) 72%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.light .mitray-shell {
+  --panel: rgba(20, 20, 45, 0.03);
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+  --accent2: #15b8cb;
+}
+
+.mitray-shell .hbar {
+  height: 66px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.mitray-shell .brand-logo {
+  width: 96px;
+  height: 52px;
+  overflow: visible;
+  display: block;
+}
+.mitray-shell .brand-logo text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+.mitray-shell .brand-logo .bl1 {
+  fill: var(--ink);
+}
+.mitray-shell .brand-logo .bl2 {
+  fill: var(--accent);
+  letter-spacing: 6px;
+}
+
+.mitray-shell .nav {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.mitray-shell .nav-pill {
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 52%, var(--accent2))
+  );
+  box-shadow: 0 8px 22px -8px var(--accent);
+}
+.mitray-shell .nav-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  border-radius: 12px;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+.mitray-shell .nav-item:hover {
+  color: var(--ink);
+}
+.mitray-shell .nav-admin {
+  color: var(--accent);
+}
+.mitray-shell .nav-item.on {
+  color: var(--pill-ink);
+}
+
+.mitray-shell .spacer {
+  flex: 1;
+}
+.mitray-shell .hact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mitray-shell .iconbtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mitray-shell .iconbtn:hover {
+  color: var(--ink);
+  border-color: var(--line2);
+}
+.mitray-shell .iconbtn.admin {
+  color: var(--accent);
+}
+.mitray-shell .iconbtn.admin:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}

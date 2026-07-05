@@ -1,0 +1,806 @@
+/* ============================================================================
+   Mitray VPN — Support screen (redesign). Ported from design-lab/support.html.
+   Scoped to .mitray-sup. Theme-adaptive via app design tokens (dark/accent),
+   redesign semantic colours pinned to the prototype hex (dark + light) per the
+   palette gotcha. Full ticket logic (create / reply / multi-image upload / rate
+   limits / disabled-redirect) is unchanged; this only restyles it.
+   ========================================================================== */
+
+.mitray-sup {
+  --bg: rgb(var(--color-dark-950));
+  --bg2: #101019;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-sup {
+  --bg2: #f5f6fc;
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* page head */
+.mitray-sup .phead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0 4px;
+}
+.mitray-sup .phead h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mitray-sup .phead h1 .hi {
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+/* buttons */
+.mitray-sup .btn-primary {
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 13px;
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--pill-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 12px 28px -12px var(--accent);
+  transition:
+    transform 0.25s,
+    box-shadow 0.3s,
+    opacity 0.2s;
+}
+.mitray-sup .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px -12px var(--accent);
+}
+.mitray-sup .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.mitray-sup .btn-ghost {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  transition: 0.2s;
+}
+.mitray-sup .btn-ghost:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* reveal */
+.mitray-sup .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-sup.in .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-sup.in .d1 {
+  transition-delay: 0.05s;
+}
+.mitray-sup.in .d2 {
+  transition-delay: 0.12s;
+}
+.mitray-sup.in .d3 {
+  transition-delay: 0.19s;
+}
+
+/* card */
+.mitray-sup .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+}
+.mitray-sup .card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.mitray-sup .card-h .t {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* contact banner */
+.mitray-sup .contact {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.mitray-sup .contact .ci {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
+.mitray-sup .contact .ct {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-sup .contact .ct b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mitray-sup .contact .ct p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* layout */
+.mitray-sup .sup-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.4fr;
+  gap: 18px;
+  align-items: start;
+  padding: 18px 0 8px;
+}
+
+/* tickets list */
+.mitray-sup .tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mitray-sup .ticket {
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.mitray-sup .ticket:hover {
+  border-color: var(--line2);
+  transform: translateY(-2px);
+}
+.mitray-sup .ticket.on {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.mitray-sup .ticket .tr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mitray-sup .ticket b {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-sup .ticket .date {
+  color: var(--faint);
+  font-size: 12px;
+  margin-top: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-sup .tst {
+  flex: none;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mitray-sup .tst.closed {
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.mitray-sup .tst.open {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 13%, transparent);
+}
+.mitray-sup .tst.wait {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.mitray-sup .tst.info {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* empty states */
+.mitray-sup .tickets-empty,
+.mitray-sup .thread-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+.mitray-sup .te-ic {
+  width: 60px;
+  height: 60px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--faint);
+}
+
+/* thread */
+.mitray-sup .thread {
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+}
+.mitray-sup .thread-empty {
+  flex: 1;
+}
+.mitray-sup .thread-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.mitray-sup .thread-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.mitray-sup .thread-h b {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Back button — only shown when the thread is a full-screen panel (mobile) */
+.mitray-sup .th-back {
+  display: none;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  place-items: center;
+  cursor: pointer;
+}
+
+/* messages */
+.mitray-sup .msgs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  max-height: 380px;
+  padding-right: 4px;
+}
+.mitray-sup .msgs::-webkit-scrollbar {
+  width: 7px;
+}
+.mitray-sup .msgs::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 10px;
+}
+.mitray-sup .msg {
+  max-width: 82%;
+  padding: 12px 15px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.mitray-sup .msg .msg-txt {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mitray-sup .msg .mt {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-sup .msg.them {
+  align-self: flex-start;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-bottom-left-radius: 5px;
+}
+.mitray-sup .msg.them .msg-txt a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.mitray-sup .msg.me {
+  align-self: flex-end;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, var(--accent2))
+  );
+  border-bottom-right-radius: 5px;
+}
+.mitray-sup .msg.me .msg-txt a {
+  color: var(--pill-ink);
+  text-decoration: underline;
+}
+
+/* reply */
+.mitray-sup .reply-form {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.mitray-sup .reply {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.mitray-sup .reply-in {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  max-height: 140px;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.mitray-sup .reply-in::placeholder {
+  color: var(--faint);
+}
+.mitray-sup .reply-in:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.mitray-sup .send {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 13px;
+  color: var(--pill-ink);
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  display: grid;
+  place-items: center;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
+}
+.mitray-sup .send:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.mitray-sup .send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.mitray-sup .closed-hint {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* create form */
+.mitray-sup .sup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+.mitray-sup .field .lab {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.mitray-sup .inp {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 13px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font:
+    500 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.mitray-sup .inp::placeholder {
+  color: var(--faint);
+}
+.mitray-sup .inp:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.mitray-sup textarea.inp {
+  min-height: 150px;
+  resize: vertical;
+}
+.mitray-sup .form-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* attachments */
+.mitray-sup .attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font:
+    600 13px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition: color 0.2s;
+}
+.mitray-sup .attach-btn:hover:not(:disabled) {
+  color: var(--accent);
+}
+.mitray-sup .attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mitray-sup .sup-atts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mitray-sup .sup-att {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+.mitray-sup .sup-att img {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line2);
+}
+.mitray-sup .sup-att .att-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.mitray-sup .sup-att .att-ov {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+}
+.mitray-sup .sup-att .att-ov.err {
+  background: color-mix(in srgb, var(--danger) 34%, transparent);
+  color: #fff;
+  font-weight: 700;
+}
+.mitray-sup .sup-att .att-x {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mitray-sup .sup-att .att-x:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+/* error + spinners */
+.mitray-sup .sup-err {
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font-size: 13px;
+}
+.mitray-sup .sup-loader {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}
+.mitray-sup .sup-spin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--line2);
+  border-top-color: var(--accent);
+  animation: sup-spin 0.8s linear infinite;
+}
+.mitray-sup .att-spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: transparent;
+  animation: sup-spin 0.8s linear infinite;
+}
+@keyframes sup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* tickets-disabled redirect card */
+.mitray-sup .redirect {
+  max-width: 460px;
+  margin: 40px auto 0;
+  text-align: center;
+}
+.mitray-sup .redirect .ri {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.mitray-sup .redirect h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.mitray-sup .redirect p {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.mitray-sup .redirect .btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Mobile (below lg, where the app shows the bottom nav / burger shell) ──
+   Single-column list + the thread becomes a full-screen sliding panel like
+   design-lab/mobile/support.html (tap a ticket → panel slides in from the
+   right, back button closes it). */
+@media (max-width: 1023px) {
+  .mitray-sup .sup-grid {
+    grid-template-columns: 1fr;
+    padding: 14px 0 0;
+  }
+
+  /* thread → full-screen panel. The base + `.in` selectors both set the
+     off-screen transform so the reveal rule (.in .reveal{transform:none})
+     can't cancel the slide. */
+  .mitray-sup .thread,
+  .mitray-sup.in .thread {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    margin: 0;
+    padding: env(safe-area-inset-top) 0 0;
+    border: none;
+    border-radius: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    opacity: 1;
+    transform: translateX(100%);
+    transition: transform 0.34s cubic-bezier(0.4, 0, 0.1, 1);
+  }
+  .mitray-sup .thread.open,
+  .mitray-sup.in .thread.open {
+    transform: none;
+  }
+
+  .mitray-sup .thread-empty {
+    display: none;
+  }
+  .mitray-sup .thread-view {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* top bar */
+  .mitray-sup .th-back {
+    display: grid;
+  }
+  .mitray-sup .thread-h {
+    flex: none;
+    height: 58px;
+    gap: 12px;
+    padding: 0 12px;
+    margin-bottom: 0;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+  }
+
+  /* messages fill + scroll, reply pinned to the bottom */
+  .mitray-sup .msgs {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding: 16px;
+  }
+  .mitray-sup .reply-form {
+    flex: none;
+    margin-top: 0;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--bg2);
+  }
+  .mitray-sup .closed-hint {
+    margin: 16px;
+  }
+
+  /* create form scrolls inside the panel */
+  .mitray-sup .sup-form {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 680px) {
+  .mitray-sup .phead h1 {
+    font-size: 24px;
+  }
+}
+
+/* phone density — tighten cards like the other mobile screens */
+@media (max-width: 560px) {
+  .mitray-sup .phead h1 {
+    font-size: 23px;
+  }
+  .mitray-sup .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .mitray-sup .card-h {
+    margin-bottom: 14px;
+  }
+  .mitray-sup .contact {
+    gap: 13px;
+  }
+  .mitray-sup .contact .ci {
+    width: 44px;
+    height: 44px;
+  }
+  .mitray-sup .ticket {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .mitray-sup .tickets {
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-sup * {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}

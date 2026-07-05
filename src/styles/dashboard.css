@@ -1,0 +1,892 @@
+/* ============================================================================
+   Mitray VPN — dashboard cockpit (redesign). Ported from design-lab/dashboard.html
+   (.cockpit / .top-row / .conn connection-hero / .side-grid / .scard / .ribbon).
+   Scoped to .mitray-dash. Theme-adaptive colors come from the app design tokens
+   (dark-* / accent-* / success-* / warning-*, which the .light class remaps), so
+   it auto-inverts between dark and light. The reused world map (worldMap.svg) is
+   restyled here for the connection hero (same as the login map, always animating).
+   ========================================================================== */
+
+.mitray-dash {
+  --bg: rgb(var(--color-dark-950));
+  --bg2: #101019;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: rgb(var(--color-critical-500));
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+
+  /* map palette (mirrors login.css) */
+  --land: #232838;
+  --landline: rgba(255, 255, 255, 0.17);
+  --landon: #16291f;
+  --ruopen: #1e5a33;
+  --ruglow: #2e7a48;
+  --flow: #3ce382;
+  --arc: rgba(60, 227, 130, 0.16);
+  --spot: #3ce382;
+
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-dash {
+  --bg2: #f5f6fc;
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+
+  --land: #d2d7e7;
+  --landline: rgba(20, 20, 45, 0.22);
+  --landon: #cdebda;
+  --ruopen: #aedfbf;
+  --ruglow: #8fd3a6;
+  --flow: #10a455;
+  --arc: rgba(16, 164, 85, 0.22);
+  --spot: #12a657;
+}
+
+/* ── welcome ── */
+.mitray-dash .welcome h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+.mitray-dash .welcome .sub {
+  margin-top: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14.5px;
+}
+.mitray-dash .badge {
+  display: inline-flex;
+  max-width: 200px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.mitray-dash .badge span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── reveal stagger (triggered by .in on the root) ── */
+.mitray-dash .reveal-up {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.mitray-dash.in .reveal-up {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.55s ease,
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-dash.in .r1 {
+  transition-delay: 0.06s;
+}
+.mitray-dash.in .r3 {
+  transition-delay: 0.22s;
+}
+
+/* ── cockpit layout ── */
+.mitray-dash .cockpit {
+  padding: 2px 0 4px;
+}
+.mitray-dash .top-row {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+}
+.mitray-dash .top-row .conn {
+  flex: 1.55 1 0;
+  min-width: 0;
+}
+.mitray-dash .side-grid {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 14px;
+}
+.mitray-dash .scard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.25s,
+    transform 0.25s,
+    background 0.25s;
+}
+.mitray-dash .scard.wide {
+  grid-column: 1 / -1;
+}
+.mitray-dash .scard.click {
+  cursor: pointer;
+}
+.mitray-dash .scard.click:hover {
+  border-color: var(--line2);
+  transform: translateY(-2px);
+  background: var(--panel2);
+}
+.mitray-dash .sc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mitray-dash .sc-ic {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  color: var(--accent);
+}
+.mitray-dash .sc-sub {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.mitray-dash .sc-sub.warn {
+  color: var(--warn);
+}
+.mitray-dash .sc-sub.green {
+  color: var(--green);
+}
+.mitray-dash .sc-k {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mitray-dash .sc-v {
+  margin-top: 5px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1;
+  color: var(--ink);
+}
+.mitray-dash .sc-v.acc {
+  color: var(--accent);
+}
+.mitray-dash .sc-v small {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── connection hero ── */
+.mitray-dash .conn {
+  position: relative;
+  height: 404px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--line2);
+  background: var(--bg2);
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.6);
+}
+.mitray-dash .conn-map {
+  position: absolute;
+  inset: 0;
+}
+.mitray-dash .conn-map .map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mitray-dash .conn-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--bg) 90%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 58%, transparent) 36%,
+      transparent 66%
+    ),
+    linear-gradient(0deg, color-mix(in srgb, var(--bg) 78%, transparent), transparent 42%);
+}
+.mitray-dash .conn-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.mitray-dash .conn-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mitray-dash .conn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 34%, transparent);
+}
+.mitray-dash .cdot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.mitray-dash .cdot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--green) 60%, transparent);
+  animation: md-cpulse 2s ease-out infinite;
+}
+.mitray-dash .conn-secure {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.mitray-dash .conn-bottom {
+  display: flex;
+  align-items: flex-end;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+.mitray-dash .conn-srv {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mitray-dash .conn-flag {
+  width: 46px;
+  height: 32px;
+  border-radius: 7px;
+  overflow: hidden;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  line-height: 1;
+  background: var(--panel2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.mitray-dash .conn-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: var(--ink);
+}
+.mitray-dash .conn-sub {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.mitray-dash .conn-metrics {
+  display: flex;
+  gap: 26px;
+}
+.mitray-dash .conn-metrics .m b {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-dash .conn-metrics .m b small {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 2px;
+}
+.mitray-dash .conn-metrics .m span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ── action ribbon: ghost chips ── */
+.mitray-dash .ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 22px;
+}
+.mitray-dash .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 16px 9px 9px;
+  border-radius: 14px;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    color 0.25s,
+    transform 0.25s;
+}
+.mitray-dash .chip .ci {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  transition: 0.25s;
+}
+.mitray-dash .chip:hover {
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+.mitray-dash .chip:hover .ci {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--panel2);
+}
+
+/* ── world map (ported from login) ── */
+.mitray-dash .conn-map .cc {
+  fill: var(--land);
+  stroke: var(--landline);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+.mitray-dash .conn-map .cc.on {
+  fill: var(--landon);
+}
+.mitray-dash .conn-map .cc.ru {
+  fill: var(--ruopen);
+}
+/* Perf: breathing via compositor-driven opacity on a twin path (.ru-glow in the
+   SVG) instead of animating `fill` — same visual, no per-frame repaint. */
+.mitray-dash .conn-map .ru-glow {
+  fill: var(--ruglow);
+  stroke: var(--landline);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  will-change: opacity;
+  animation: md-ruglow 4.5s ease-in-out infinite;
+}
+.mitray-dash .conn-map .arc-base {
+  fill: none;
+  stroke: var(--arc);
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+.mitray-dash .conn-map .arc-flow {
+  fill: none;
+  stroke: var(--flow);
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 5 11;
+  animation: md-flow 1.2s linear infinite;
+  /* no per-frame drop-shadow here — the glow lives on the static .arc-halo */
+}
+.mitray-dash .conn-map .arc-halo {
+  fill: none;
+  stroke: var(--flow);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.3;
+  filter: blur(3px);
+  will-change: opacity; /* own layer → the blur renders once, not per dash frame */
+}
+.mitray-dash .conn-map .spot {
+  fill: var(--spot);
+  filter: drop-shadow(0 0 6px var(--spot));
+}
+.mitray-dash .conn-map .spot-ring {
+  fill: none;
+  stroke: var(--spot);
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: md-pulse 2.8s ease-out infinite;
+}
+.mitray-dash .conn-map .moscow {
+  fill: var(--flow);
+}
+.mitray-dash .conn-map .lock {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: md-jiggle 4s ease-in-out 2.4s infinite;
+  filter: drop-shadow(0 0 7px var(--flow));
+}
+.mitray-dash .conn-map .lock-body {
+  fill: rgba(8, 18, 12, 0.5);
+  stroke: #eafff2;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.mitray-dash .conn-map .lock-shackle {
+  fill: none;
+  stroke: #eafff2;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.mitray-dash .conn-map .lock-hole {
+  fill: #eafff2;
+}
+.mitray-dash .conn-map .flag {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.mitray-dash .conn-map .flag-bd {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.4;
+}
+
+/* Perf: ConnectionHero toggles .map-idle when the hero leaves the viewport —
+   the infinite map animations stop burning paint while nobody can see them. */
+.mitray-dash .conn.map-idle .conn-map .arc-flow,
+.mitray-dash .conn.map-idle .conn-map .spot-ring,
+.mitray-dash .conn.map-idle .conn-map .ru-glow,
+.mitray-dash .conn.map-idle .conn-map .lock,
+.mitray-dash .conn.map-idle .cdot::after {
+  animation-play-state: paused;
+}
+
+@keyframes md-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+@keyframes md-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}
+@keyframes md-ruglow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* transform/opacity ring (was an animated box-shadow — paint every frame) */
+@keyframes md-cpulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70%,
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+@keyframes md-jiggle {
+  0%,
+  78%,
+  100% {
+    transform: rotate(0);
+  }
+  82% {
+    transform: rotate(-9deg);
+  }
+  86% {
+    transform: rotate(7deg);
+  }
+  90% {
+    transform: rotate(-5deg);
+  }
+  94% {
+    transform: rotate(3deg);
+  }
+  97% {
+    transform: rotate(0);
+  }
+}
+
+/* ── locked hero: the "disconnected twin" of the connection hero ──
+   Shown for expired / disabled / traffic-limited subscriptions
+   (ported from design-lab/mobile/expired.html). --c drives the accent:
+   danger (red) by default, warn (amber) for the traffic-limited variant. */
+.mitray-dash .lk {
+  --c: var(--danger);
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 26px 24px 24px;
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--c) 24%, transparent);
+  background:
+    radial-gradient(
+      135% 90% at 50% -18%,
+      color-mix(in srgb, var(--c) 15%, transparent),
+      transparent 60%
+    ),
+    var(--bg2);
+}
+.mitray-dash .lk--limited {
+  --c: var(--warn);
+}
+.mitray-dash .lk-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mitray-dash .lk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+}
+.mitray-dash .lk-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c);
+  animation: lk-brk 2.4s ease-in-out infinite;
+}
+@keyframes lk-brk {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.25;
+  }
+}
+.mitray-dash .lk-when {
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mitray-dash .lk-emblem {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 14px auto 12px;
+  display: grid;
+  place-items: center;
+}
+.mitray-dash .lk-ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--c) 45%, transparent);
+  opacity: 0;
+}
+.mitray-dash .lk-ring.r1 {
+  animation: lk-sig 3.4s ease-out infinite;
+}
+.mitray-dash .lk-ring.r2 {
+  animation: lk-sig 3.4s ease-out infinite 1.13s;
+}
+.mitray-dash .lk-ring.r3 {
+  animation: lk-sig 3.4s ease-out infinite 2.26s;
+}
+@keyframes lk-sig {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.mitray-dash .lk-circle {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--c);
+  background: radial-gradient(
+    circle at 50% 35%,
+    color-mix(in srgb, var(--c) 22%, transparent),
+    color-mix(in srgb, var(--c) 8%, transparent)
+  );
+  border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--c) 45%, transparent));
+}
+.mitray-dash .lk-circle svg {
+  animation: lk-shake 5s ease-in-out 1.5s infinite;
+}
+@keyframes lk-shake {
+  0%,
+  88%,
+  100% {
+    transform: translateX(0);
+  }
+  90% {
+    transform: translateX(-2px);
+  }
+  93% {
+    transform: translateX(2px);
+  }
+  96% {
+    transform: translateX(-1px);
+  }
+}
+
+.mitray-dash .lk-title {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.mitray-dash .lk-desc {
+  margin: 8px auto 0;
+  max-width: 300px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.mitray-dash .lk-err {
+  margin: 14px auto 0;
+  max-width: 360px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.mitray-dash .lk-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mitray-dash .lk-cta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 15px;
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+  font:
+    700 15.5px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--pill-ink);
+  text-decoration: none;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, var(--accent2))
+  );
+  box-shadow: 0 12px 30px -12px var(--accent);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.mitray-dash .lk-cta:hover {
+  box-shadow: 0 16px 36px -12px var(--accent);
+}
+.mitray-dash .lk-cta:active {
+  transform: scale(0.985);
+}
+.mitray-dash .lk-cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.mitray-dash .lk-alt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 14px;
+  cursor: pointer;
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+.mitray-dash .lk-alt:hover {
+  border-color: var(--line2);
+}
+.mitray-dash .lk-alt:active {
+  transform: scale(0.985);
+}
+.mitray-dash .lk-spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--pill-ink) 35%, transparent);
+  border-top-color: var(--pill-ink);
+  animation: lk-spin 0.7s linear infinite;
+}
+@keyframes lk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.mitray-dash .lk-bal {
+  margin-top: 14px;
+  color: var(--faint);
+  font-size: 12px;
+}
+.mitray-dash .lk-bal b {
+  color: var(--muted);
+  font-weight: 600;
+}
+.mitray-dash .lk-bal b.ok {
+  color: var(--green);
+}
+/* desktop: keep the focused hero from stretching edge-to-edge */
+@media (min-width: 640px) {
+  .mitray-dash .lk {
+    padding: 34px 34px 30px;
+  }
+  .mitray-dash .lk-title {
+    font-size: 28px;
+  }
+  .mitray-dash .lk-actions {
+    max-width: 440px;
+    margin: 22px auto 0;
+  }
+}
+
+/* ── responsive: stack the top row, keep everything readable ── */
+@media (max-width: 900px) {
+  .mitray-dash .top-row {
+    flex-direction: column;
+  }
+  .mitray-dash .top-row .conn {
+    /* flex:1.55 1 0 (desktop) sets flex-basis:0, which overrides height in this
+       now-column flex → the map (all-absolute children, no min-content) collapsed
+       to 0. Pin it so the connection hero keeps its height on mobile. */
+    flex: none;
+    height: 300px;
+  }
+  .mitray-dash .conn-name {
+    font-size: 24px;
+  }
+  .mitray-dash .side-grid {
+    grid-template-rows: auto;
+  }
+  .mitray-dash .scard {
+    min-height: 104px;
+  }
+}
+@media (max-width: 560px) {
+  .mitray-dash .welcome h1 {
+    font-size: 24px;
+  }
+  .mitray-dash .conn-overlay {
+    padding: 22px 20px;
+  }
+  .mitray-dash .conn-metrics {
+    gap: 18px;
+  }
+  /* quick actions → bordered 2-col button grid on phones (matches the mobile
+     prototype's .quick/.qa; the ghost chip strip reads as empty on a phone) */
+  .mitray-dash .ribbon {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mitray-dash .chip {
+    padding: 12px 13px;
+    border-radius: 14px;
+    background: var(--panel);
+    border-color: var(--line);
+    color: var(--ink);
+    font-size: 13.5px;
+    min-width: 0;
+  }
+  .mitray-dash .chip .ci {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--panel2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-dash * {
+    animation: none !important;
+    transition-duration: 0.001s !important;
+  }
+}

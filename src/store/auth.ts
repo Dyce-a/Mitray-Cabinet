@@ -20,6 +20,7 @@ import {
   restoreRefreshTokenFromCloud,
 } from '../utils/token';
 import { usePermissionStore } from './permissions';
+import { resetIntroPlayback } from './intro';
 
 export interface TelegramWidgetData {
   id: number;
@@ -113,6 +114,9 @@ export const useAuthStore = create<AuthState>()(
         }
         tokenStorage.clearTokens();
         usePermissionStore.getState().reset();
+        // Re-arm the cinematic intro: logging straight back in should replay
+        // the logo flight + signature loader, not cut to the dashboard.
+        resetIntroPlayback();
         set({
           accessToken: null,
           refreshToken: null,

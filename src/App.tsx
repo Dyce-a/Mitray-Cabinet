@@ -8,7 +8,26 @@ import { useAuthStore } from './store/auth';
  */
 function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
   return lazy(() =>
-    factory().catch(() => {
+    factory().catch(async (err) => {
+      // DEV: a failed dynamic import is almost always a transient Vite recompile
+      // / dependency re-optimization ("504 Outdated Optimize Dep"), NOT a stale
+      // deploy. The prod path below reloads and remembers it in sessionStorage —
+      // which SURVIVES a normal refresh (only a new tab / incognito clears it) —
+      // so the guard can wedge the page until it expires. That is exactly the
+      // "site stops loading after edits until I open an incognito tab" symptom.
+      // In dev, just retry the import a few times; Vite triggers its own full
+      // reload once it finishes re-optimizing.
+      if (import.meta.env.DEV) {
+        for (let i = 0; i < 3; i++) {
+          await new Promise((r) => setTimeout(r, 300));
+          try {
+            return await factory();
+          } catch {
+            /* keep retrying */
+          }
+        }
+        throw err;
+      }
       const key = 'chunk_reload_ts';
       const last = Number(sessionStorage.getItem(key) || '0');
       if (Date.now() - last > 30_000) {

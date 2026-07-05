@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import type { Subscription } from '../../types';
 import { subscriptionApi } from '../../api/subscription';
-import { useTheme } from '../../hooks/useTheme';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useHapticFeedback } from '../../platform/hooks/useHaptic';
-import { getGlassColors } from '../../utils/glassTheme';
 import { getInsufficientBalanceError } from '../../utils/subscriptionHelpers';
-import { ClockIcon, ExclamationIcon, PlusIcon, SubscriptionIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import { ExclamationIcon, LockIcon, PlusIcon, SubscriptionIcon } from '@/components/icons';
 
 interface SubscriptionCardExpiredProps {
   subscription: Subscription;
@@ -26,8 +25,6 @@ export default function SubscriptionCardExpired({
   className,
 }: SubscriptionCardExpiredProps) {
   const { t } = useTranslation();
-  const { isDark } = useTheme();
-  const g = getGlassColors(isDark);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,10 +42,28 @@ export default function SubscriptionCardExpired({
   // Detect daily subscription (disabled or expired)
   const isDaily = subscription.is_daily;
   const isDisabledDaily = subscription.status === 'disabled' && isDaily;
+  const isTrial = subscription.is_trial;
 
   // For daily subs, check if balance covers daily price; otherwise 100 kopeks minimum
   const dailyPrice = subscription.daily_price_kopeks ?? 0;
   const hasBalance = isDaily ? balanceKopeks >= dailyPrice && dailyPrice > 0 : balanceKopeks >= 100;
+
+  // Traffic top-up is a per-tariff feature — some tariffs forbid it, and then
+  // "Докупить трафик" would dead-end / error (memory cabinet-addon-tariff-error).
+  // Only in the limited (traffic exhausted) state do we need to know: fetch the
+  // tariff and, if top-up is off, steer the CTA to the tariffs page instead.
+  const { data: purchaseOptions } = useQuery({
+    queryKey: ['purchase-options', subscription.id],
+    queryFn: () => subscriptionApi.getPurchaseOptions(subscription.id),
+    enabled: isLimited,
+    staleTime: 60_000,
+  });
+  const trafficTopupAvailable =
+    purchaseOptions?.sales_mode === 'tariffs'
+      ? purchaseOptions.tariffs.find(
+          (tf) => tf.is_current || tf.id === purchaseOptions.current_tariff_id,
+        )?.traffic_topup_enabled === true
+      : true; // classic mode or still loading → assume available (page re-gates)
 
   const handleQuickRenew = async () => {
     setIsRenewing(true);
@@ -102,226 +117,134 @@ export default function SubscriptionCardExpired({
     navigate(`/balance/top-up?${params.toString()}`);
   };
 
-  // Color scheme: amber for limited, red for expired/disabled
-  const accent = isLimited
-    ? {
-        r: 255,
-        g: 184,
-        b: 0,
-        hex: 'rgb(var(--color-urgent-400))',
-        gradient: 'linear-gradient(135deg, #FFB800, #FF8C00)',
-      }
-    : {
-        r: 255,
-        g: 59,
-        b: 92,
-        hex: 'rgb(var(--color-critical-500))',
-        gradient: 'linear-gradient(135deg, #FF3B5C, #FF6B35)',
-      };
+  // Heading / description / status badge per state.
+  const badgeText = isLimited
+    ? t('dashboard.status.limited', 'Лимит трафика')
+    : isDisabledDaily
+      ? t('dashboard.status.suspended', 'Приостановлено')
+      : t('dashboard.status.disconnected', 'Отключено');
+
+  const title = isLimited
+    ? t('subscription.trafficLimitedTitle')
+    : isDisabledDaily
+      ? t('dashboard.suspended.title')
+      : isTrial
+        ? t('dashboard.expired.trialTitle')
+        : t('dashboard.expired.title');
+
+  const desc = isLimited
+    ? trafficTopupAvailable
+      ? t('subscription.trafficLimitedDescription')
+      : t(
+          'subscription.trafficLimitedNoTopup',
+          'Трафик по этому тарифу нельзя докупить — смени тариф, чтобы получить больше.',
+        )
+    : isTrial
+      ? t('dashboard.expired.trialSubtitle')
+      : t('dashboard.expired.paidSubtitle');
+
+  const whenLabel = isLimited
+    ? t('dashboard.expired.activeUntil')
+    : t('dashboard.expired.expiredDate', { context: isTrial ? 'trial' : '' });
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-3xl ${className ?? ''}`}
-      style={{
-        background: g.cardBg,
-        border: isDark
-          ? `1px solid rgba(${accent.r},${accent.g},${accent.b},0.12)`
-          : `1px solid rgba(${accent.r},${accent.g},${accent.b},0.2)`,
-        boxShadow: isDark
-          ? g.shadow
-          : `0 2px 16px rgba(${accent.r},${accent.g},${accent.b},0.1), 0 0 0 1px rgba(${accent.r},${accent.g},${accent.b},0.06)`,
-        padding: '28px 28px 24px',
-      }}
+    <section
+      className={cn('lk', isLimited ? 'lk--limited' : 'lk--expired', className)}
+      style={{ boxShadow: '0 24px 60px -34px rgba(0,0,0,.55)' }}
     >
-      {/* Glow */}
-      <div
-        className="pointer-events-none absolute"
-        style={{
-          top: -60,
-          right: -60,
-          width: 200,
-          height: 200,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(${accent.r},${accent.g},${accent.b},0.08) 0%, transparent 70%)`,
-        }}
-        aria-hidden="true"
-      />
-      {/* Grid pattern */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          opacity: isDark ? 0.02 : 0.04,
-          backgroundImage: isDark
-            ? `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-               linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`
-            : `linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
-               linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
-        }}
-        aria-hidden="true"
-      />
+      <div className="lk-top">
+        <span className="lk-badge">
+          <span className="lk-dot" aria-hidden="true" />
+          {badgeText}
+        </span>
+        <span className="lk-when">
+          {whenLabel} · {formattedDate}
+        </span>
+      </div>
 
-      {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px]"
-          style={{
-            background: `rgba(${accent.r},${accent.g},${accent.b},0.1)`,
-            border: `1px solid rgba(${accent.r},${accent.g},${accent.b},0.15)`,
-            color: accent.hex,
-          }}
-        >
+      {/* emblem: broken "signal lost" rings around a padlock (exclamation for limited) */}
+      <div className="lk-emblem" aria-hidden="true">
+        <span className="lk-ring r1" />
+        <span className="lk-ring r2" />
+        <span className="lk-ring r3" />
+        <span className="lk-circle">
           {isLimited ? (
-            <ExclamationIcon className="h-[22px] w-[22px]" />
+            <ExclamationIcon className="h-[30px] w-[30px]" />
           ) : (
-            <ClockIcon className="h-[22px] w-[22px]" />
+            <LockIcon className="h-[30px] w-[30px]" />
           )}
-        </div>
-        <h2 className="text-lg font-bold tracking-tight text-dark-50">
-          {isLimited
-            ? t('subscription.trafficLimitedTitle')
-            : isDisabledDaily
-              ? t('dashboard.suspended.title')
-              : subscription.is_trial
-                ? t('dashboard.expired.trialTitle')
-                : t('dashboard.expired.title')}
-        </h2>
+        </span>
       </div>
 
-      {/* Limited description */}
-      {isLimited && (
-        <p className="mb-4 text-sm text-dark-50/60">
-          {t('subscription.trafficLimitedDescription')}
-        </p>
-      )}
+      <h2 className="lk-title">{title}</h2>
+      <p className="lk-desc">{desc}</p>
 
-      {/* Expired date + Balance row */}
-      <div
-        className="mb-5 flex items-center justify-between rounded-[14px]"
-        style={{
-          background: `rgba(${accent.r},${accent.g},${accent.b},0.04)`,
-          border: `1px solid rgba(${accent.r},${accent.g},${accent.b},0.08)`,
-          padding: '14px 18px',
-        }}
-      >
-        <div className="flex items-center">
-          <div className="mb-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-dark-50/30">
-            {isLimited
-              ? t('dashboard.expired.activeUntil')
-              : t('dashboard.expired.expiredDate', {
-                  context: subscription.is_trial ? 'trial' : '',
-                })}
-          </div>
-          <div className="ml-3 text-base font-bold tracking-tight text-dark-50/50">
-            {formattedDate}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-dark-50/30">
-            {t('dashboard.expired.balance')}
-          </span>
-          <span
-            className={`text-sm font-semibold ${hasBalance ? 'text-success-400' : 'text-dark-50/30'}`}
-          >
-            {formatAmount(balanceRubles)} {currencySymbol}
-          </span>
-        </div>
-      </div>
-
-      {/* Renew error */}
       {renewError && (
-        <div
-          className="mb-4 rounded-xl border border-error-500/30 bg-error-500/10 p-3 text-center text-sm text-error-400"
-          role="alert"
-        >
+        <div className="lk-err" role="alert">
           {renewError}
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="flex gap-2.5">
+      <div className="lk-actions">
         {isLimited ? (
-          <Link
-            to={`/subscriptions/${subscription.id}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold tracking-tight text-white transition-all duration-300"
-            style={{
-              background: accent.gradient,
-              boxShadow: `0 4px 20px rgba(${accent.r},${accent.g},${accent.b},0.2)`,
-            }}
-          >
-            <PlusIcon className="h-4 w-4" />
-            {t('subscription.buyTraffic')}
+          trafficTopupAvailable ? (
+            <Link to={`/subscriptions/${subscription.id}`} className="lk-cta">
+              <PlusIcon className="h-4 w-4" />
+              {t('subscription.buyTraffic')}
+            </Link>
+          ) : (
+            <Link to="/subscription/purchase" className="lk-cta">
+              <SubscriptionIcon className="h-4 w-4" />
+              {t('dashboard.expired.tariffs')}
+            </Link>
+          )
+        ) : isTrial ? (
+          <Link to="/subscription/purchase" className="lk-cta">
+            <SubscriptionIcon className="h-4 w-4" />
+            {t('dashboard.expired.tariffs')}
           </Link>
         ) : (
           <>
-            {/* Quick Renew or Top Up button (hidden for expired trials) */}
-            {!subscription.is_trial && (
-              <>
-                {hasBalance ? (
-                  <button
-                    type="button"
-                    onClick={handleQuickRenew}
-                    disabled={isRenewing}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold tracking-tight text-white transition-all duration-300 disabled:opacity-50"
-                    style={{
-                      background: accent.gradient,
-                      boxShadow: `0 4px 20px rgba(${accent.r},${accent.g},${accent.b},0.2)`,
-                    }}
-                  >
-                    {isRenewing ? (
-                      <span
-                        className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <SubscriptionIcon className="h-4 w-4" />
-                    )}
-                    {isRenewing
-                      ? t('common.loading')
-                      : isDisabledDaily
-                        ? t('dashboard.suspended.resume')
-                        : t('dashboard.expired.quickRenew')}
-                  </button>
+            {hasBalance ? (
+              <button
+                type="button"
+                onClick={handleQuickRenew}
+                disabled={isRenewing}
+                className="lk-cta"
+              >
+                {isRenewing ? (
+                  <span className="lk-spin" aria-hidden="true" />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleTopUp}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold tracking-tight text-white transition-all duration-300"
-                    style={{
-                      background: accent.gradient,
-                      boxShadow: `0 4px 20px rgba(${accent.r},${accent.g},${accent.b},0.2)`,
-                    }}
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    {t('dashboard.expired.topUp')}
-                  </button>
+                  <SubscriptionIcon className="h-4 w-4" />
                 )}
-              </>
+                {isRenewing
+                  ? t('common.loading')
+                  : isDisabledDaily
+                    ? t('dashboard.suspended.resume')
+                    : t('dashboard.expired.quickRenew')}
+              </button>
+            ) : (
+              <button type="button" onClick={handleTopUp} className="lk-cta">
+                <PlusIcon className="h-4 w-4" />
+                {t('dashboard.expired.topUp')}
+              </button>
             )}
-
-            {/* Tariffs (go to purchase page) — full-width for trials */}
-            <Link
-              to="/subscription/purchase"
-              className={`flex items-center justify-center rounded-[14px] px-5 py-3.5 text-[15px] font-semibold tracking-tight transition-colors duration-200 ${
-                subscription.is_trial ? 'flex-1 text-white' : 'text-dark-50/50'
-              }`}
-              style={
-                subscription.is_trial
-                  ? {
-                      background: accent.gradient,
-                      boxShadow: `0 4px 20px rgba(${accent.r},${accent.g},${accent.b},0.2)`,
-                    }
-                  : {
-                      background: g.innerBg,
-                      border: `1px solid ${g.innerBorder}`,
-                    }
-              }
-            >
+            <Link to="/subscription/purchase" className="lk-alt">
               {t('dashboard.expired.tariffs')}
             </Link>
           </>
         )}
       </div>
-    </div>
+
+      <div className="lk-bal">
+        {t('dashboard.expired.balance')}{' '}
+        <b className={hasBalance ? 'ok' : undefined}>
+          {formatAmount(balanceRubles)} {currencySymbol}
+        </b>
+        {hasBalance &&
+          !isLimited &&
+          ` · ${t('dashboard.expired.fromBalance', 'спишется с баланса')}`}
+      </div>
+    </section>
   );
 }

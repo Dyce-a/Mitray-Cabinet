@@ -13,6 +13,8 @@ import { CardsBlock, TimelineBlock, AccordionBlock, MinimalBlock, BlockButtons }
 import type { BlockRendererProps, RenderBlock } from './blocks';
 import TvQuickConnect from './TvQuickConnect';
 import { BackIcon, BookOpenIcon, ChevronIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import '@/styles/connection.css';
 
 const platformOrder = ['ios', 'android', 'windows', 'macos', 'linux', 'androidTV', 'appleTV'];
 
@@ -65,6 +67,24 @@ export default function InstallationGuide({
 
   const [activePlatformKey, setActivePlatformKey] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<RemnawaveAppClient | null>(null);
+
+  // Reveal stagger — add `.in` to the root after first paint (see connection.css).
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    // Double rAF: with a warm query cache the page renders in its first frame
+    // and a single rAF fires BEFORE that frame paints — .in would land in the
+    // initial paint and the stagger would have nothing to animate from.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   const getLocalizedText = useCallback(
     (text: LocalizedText | undefined): string => {
@@ -210,54 +230,46 @@ export default function InstallationGuide({
   }
 
   return (
-    <div className="space-y-6 pb-6">
-      {/* Header + platform dropdown */}
-      <div className="flex items-center gap-3">
+    <div className={cn('mitray-conn', revealed && 'in')}>
+      {/* Head: breadcrumb + title + QR + platform select */}
+      <div className="conn-crumb">
+        {t('nav.cabinet', 'Кабинет')} ·{' '}
+        <b>{t('subscription.connection.breadcrumb', 'Подключение')}</b>
+      </div>
+      <div className="conn-title-row">
         {!isTelegramWebApp && (
-          <button
-            onClick={onGoBack}
-            aria-label={t('common.back', 'Back')}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600"
-          >
+          <button onClick={onGoBack} aria-label={t('common.back', 'Back')} className="conn-back">
             <BackIcon className="h-6 w-6" />
           </button>
         )}
-        <h2 className="flex-1 text-lg font-bold text-dark-100">
-          {getBaseTranslation('installationGuideHeader', 'subscription.connection.title')}
-        </h2>
+        <h1>{getBaseTranslation('installationGuideHeader', 'subscription.connection.title')}</h1>
         {appConfig.subscriptionUrl && onOpenQR && (
           <button
             onClick={() => onOpenQR()}
             aria-label={t('subscription.connection.openQr', 'Open QR code')}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 text-dark-200 transition-colors hover:border-dark-600"
+            className="qrbtn"
           >
             <svg
-              className="h-5 w-5"
-              fill="none"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
+              fill="none"
               stroke="currentColor"
-              strokeWidth={1.5}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75H16.5v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h3v3h-3v-3z"
-              />
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <path d="M14 14h3v3M21 14v.01M17 21h.01M21 17v4" />
             </svg>
           </button>
         )}
         {availablePlatforms.length > 1 && (
-          <div className="relative flex items-center">
+          <div className="plat">
             {currentPlatformSvg && (
-              <div
-                className="pointer-events-none absolute left-3 z-10 h-5 w-5 text-dark-400 [&>svg]:h-full [&>svg]:w-full"
-                dangerouslySetInnerHTML={{ __html: currentPlatformSvg }}
-              />
+              <span className="pico" dangerouslySetInnerHTML={{ __html: currentPlatformSvg }} />
             )}
             <select
               value={currentPlatformKey || ''}
@@ -275,11 +287,7 @@ export default function InstallationGuide({
                   if (app) setSelectedApp(app);
                 }
               }}
-              className={`appearance-none rounded-xl border py-2 pr-8 text-sm font-medium outline-none transition-colors ${
-                isLight
-                  ? 'border-dark-700/60 bg-white/80 text-dark-200 shadow-sm hover:border-dark-600'
-                  : 'border-dark-700 bg-dark-800 text-dark-200 hover:border-dark-600'
-              } ${currentPlatformSvg ? 'pl-10' : 'pl-4'}`}
+              style={currentPlatformSvg ? undefined : { paddingLeft: 18 }}
             >
               {availablePlatforms.map((p) => (
                 <option key={p} value={p}>
@@ -287,16 +295,16 @@ export default function InstallationGuide({
                 </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute right-2.5 text-dark-400">
-              <ChevronIcon className="h-4 w-4" />
-            </div>
+            <span className="pchev">
+              <ChevronIcon className="h-[14px] w-[14px]" />
+            </span>
           </div>
         )}
       </div>
 
       {/* App chips */}
       {currentPlatformApps.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="apps">
           {currentPlatformApps.map((app, idx) => {
             const isSelected = selectedApp?.name === app.name;
             const appIconSvg = getSvgHtml(app.svgIconKey);
@@ -304,23 +312,12 @@ export default function InstallationGuide({
               <button
                 key={app.name + idx}
                 onClick={() => setSelectedApp(app)}
-                className={`relative flex min-w-[calc(50%-0.25rem)] items-center gap-2 overflow-hidden rounded-xl px-4 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
-                  isSelected
-                    ? isLight
-                      ? 'bg-accent-500/15 text-accent-600 ring-1 ring-accent-500/40'
-                      : 'bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/40'
-                    : isLight
-                      ? 'border border-dark-700/60 bg-white/80 text-dark-200 shadow-sm hover:border-dark-600/50 hover:bg-white'
-                      : 'border border-dark-700/50 bg-dark-800/80 text-dark-200 hover:border-dark-600/50 hover:bg-dark-700/80'
-                }`}
+                className={cn('app', isSelected && 'on')}
               >
-                {app.featured && <span className="h-2 w-2 shrink-0 rounded-full bg-warning-400" />}
-                <span className="relative z-10 truncate">{app.name}</span>
+                {app.featured && <span className="dot" />}
+                <span className="an">{app.name}</span>
                 {appIconSvg && (
-                  <div
-                    className="ml-auto h-7 w-7 shrink-0 opacity-30 [&>svg]:h-full [&>svg]:w-full"
-                    dangerouslySetInnerHTML={{ __html: appIconSvg }}
-                  />
+                  <span className="alogo" dangerouslySetInnerHTML={{ __html: appIconSvg }} />
                 )}
               </button>
             );
@@ -334,25 +331,27 @@ export default function InstallationGuide({
           href={appConfig.baseSettings.tutorialUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-secondary w-full justify-center"
+          className="conn-tut"
         >
           <BookOpenIcon className="h-5 w-5" />
           {getBaseTranslation('tutorial', 'subscription.connection.tutorial')}
         </a>
       )}
 
-      {/* Blocks rendered in the panel's active style. For the Happ Android TV
-          app the TV connect widget is injected into a step (customNode), so it
-          adapts to that style instead of breaking it. */}
+      {/* Blocks rendered in the panel's active style (Remnawave-driven). For the
+          Happ Android TV app the TV connect widget is injected into a step
+          (customNode), so it adapts to that style instead of breaking it. */}
       {selectedApp && (
-        <Renderer
-          blocks={renderBlocks}
-          isMobile={isMobile}
-          isLight={isLight}
-          getLocalizedText={getLocalizedText}
-          getSvgHtml={getSvgHtml}
-          renderBlockButtons={renderBlockButtons}
-        />
+        <div className="reveal d1">
+          <Renderer
+            blocks={renderBlocks}
+            isMobile={isMobile}
+            isLight={isLight}
+            getLocalizedText={getLocalizedText}
+            getSvgHtml={getSvgHtml}
+            renderBlockButtons={renderBlockButtons}
+          />
+        </div>
       )}
     </div>
   );

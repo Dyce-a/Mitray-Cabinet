@@ -1,0 +1,1256 @@
+/* ============================================================================
+   Mitray VPN — Login screen (redesign).
+   Ported from design-lab/login.html. Scoped to .mitray-login so it never leaks
+   into the rest of the app. Theme-adaptive colors come from the app's design
+   tokens (--color-dark-* / --color-accent-*, which the .light class remaps), so
+   --bg / --ink / --accent / --pill auto-invert between dark and light. Only the
+   world-map palette is theme-specific and declared explicitly below.
+   Intro / morph state lives on the root element (.auth / .play / .mode-register)
+   instead of <body> as in the prototype.
+   ========================================================================== */
+
+.mitray-login {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+
+  /* token-derived, auto-adapting */
+  --bg: rgb(var(--color-dark-950));
+  --bg2: rgb(var(--color-dark-900));
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --pill: rgb(var(--color-dark-50));
+  --pill-ink: rgb(var(--color-dark-950));
+  --line: rgba(255, 255, 255, 0.09);
+  --card: rgba(255, 255, 255, 0.04);
+  --o1: 0.3;
+  --o2: 0.26;
+
+  /* world-map palette (dark) */
+  --land: #232838;
+  --landline: rgba(255, 255, 255, 0.17);
+  --landon: #16291f;
+  --ru: #6e2233;
+  --ruopen: #1e5a33;
+  --ruglow: #2e7a48;
+  --flow: #3ce382;
+  --arc: rgba(60, 227, 130, 0.16);
+  --spot: #3ce382;
+}
+
+.light .mitray-login {
+  --accent2: #15b8cb;
+  --line: rgba(20, 20, 45, 0.13);
+  --card: rgba(20, 20, 45, 0.04);
+  --o1: 0.4;
+  --o2: 0.34;
+  --land: #d2d7e7;
+  --landline: rgba(20, 20, 45, 0.22);
+  --landon: #cdebda;
+  --ru: #e7a8b5;
+  --ruopen: #aedfbf;
+  --ruglow: #8fd3a6;
+  --flow: #10a455;
+  --arc: rgba(16, 164, 85, 0.22);
+  --spot: #12a657;
+}
+
+/* ── background ── */
+.mitray-login .bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+.mitray-login .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  will-change: transform;
+}
+.mitray-login .b1 {
+  width: 560px;
+  height: 560px;
+  left: -160px;
+  top: 18%;
+  opacity: var(--o1);
+  background: radial-gradient(circle, var(--accent), transparent 68%);
+}
+.mitray-login .b2 {
+  width: 520px;
+  height: 520px;
+  right: -150px;
+  bottom: -120px;
+  opacity: var(--o2);
+  background: radial-gradient(circle, var(--accent2), transparent 68%);
+}
+.mitray-login .map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Static pre-blurred twin of the desktop map (second copy of the same SVG).
+   The auth-open "defocus" is an opacity crossfade between the crisp map and
+   this frozen copy — the old approach (transitioning filter: blur(6px) on the
+   whole .bg) re-filtered the entire screen every frame and tanked desktop FPS.
+   The blur renders ONCE here (static radius, animations killed inside). */
+.mitray-login .map-blur {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(6px) saturate(0.92);
+  opacity: 0;
+  transition: opacity 0.7s ease;
+  will-change: opacity;
+}
+.mitray-login .map-blur * {
+  animation: none !important;
+  will-change: auto !important; /* no extra layers inside a frozen snapshot */
+}
+/* mobile hub scene (full-Russia portrait) — hidden on desktop, swapped in
+   below the breakpoint (see @media max-width:768px). */
+.mitray-login .map-hub {
+  position: absolute;
+  inset: 0;
+  display: none;
+  transform: scale(1.05);
+  transform-origin: 50% 64%;
+}
+.mitray-login .map-hub svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.mitray-login.play .map-hub {
+  transform: none;
+  transition: transform 1.2s cubic-bezier(0.55, 0.05, 0.15, 1) 1.3s;
+}
+.mitray-login .veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 40% 44% at 50% 50%,
+    color-mix(in srgb, var(--bg) 90%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 48%,
+    transparent 80%
+  );
+}
+/* Auth-state veil (stronger, full-coverage dim). Crossfades with .veil via
+   opacity — interpolating one radial-gradient into another repainted the whole
+   screen every frame of the 0.7s transition. */
+.mitray-login .veil-auth {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 70% 65% at 50% 50%,
+    color-mix(in srgb, var(--bg) 96%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 78%, transparent) 55%,
+    color-mix(in srgb, var(--bg) 42%, transparent) 100%
+  );
+}
+
+.mitray-login .cc {
+  fill: var(--land);
+  stroke: var(--landline);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+.mitray-login .cc.on {
+  fill: var(--landon);
+}
+.mitray-login .cc.ru {
+  fill: var(--ruopen);
+}
+/* Perf: Russia "breathes" via a compositor-driven opacity crossfade on a twin
+   path (.ru-glow in the SVG) instead of animating `fill` — which repainted the
+   biggest path on screen every frame. Identical visual (ruopen ⇄ ruglow). */
+.mitray-login .ru-glow {
+  fill: var(--ruglow);
+  stroke: var(--landline);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  will-change: opacity;
+  animation: ml-ruglow 4.5s ease-in-out infinite;
+}
+.mitray-login .arc-base {
+  fill: none;
+  stroke: var(--arc);
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+.mitray-login .arc-flow {
+  fill: none;
+  stroke: var(--flow);
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 5 11;
+  animation: ml-flow 1.2s linear infinite;
+  /* no per-frame drop-shadow here — the glow lives on the static .arc-halo */
+}
+/* Perf: static glow tube under the dash train (.arc-halo twin in the SVG).
+   Replaces drop-shadow on the animated dashes, which re-ran the filter every
+   frame; time-averaged the two look the same. */
+.mitray-login .arc-halo {
+  fill: none;
+  stroke: var(--flow);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.3;
+  filter: blur(3px);
+  will-change: opacity; /* own layer → the blur renders once, not per dash frame */
+}
+.mitray-login .spot {
+  fill: var(--spot);
+  filter: drop-shadow(0 0 6px var(--spot));
+}
+.mitray-login .spot-ring {
+  fill: none;
+  stroke: var(--spot);
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ml-pulse 2.8s ease-out infinite;
+}
+.mitray-login .moscow {
+  fill: var(--flow);
+}
+.mitray-login .lock {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ml-jiggle 4s ease-in-out 2.4s infinite;
+  filter: drop-shadow(0 0 7px var(--flow));
+}
+.mitray-login .lock-body {
+  fill: rgba(8, 18, 12, 0.5);
+  stroke: #eafff2;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.mitray-login .lock-shackle {
+  fill: none;
+  stroke: #eafff2;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.mitray-login .lock-hole {
+  fill: #eafff2;
+}
+.mitray-login .flag {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+.mitray-login .flag-bd {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.4;
+}
+/* hub-only nodes (mobile login scene): destination cities + staggered reveals.
+   These elements exist only in russiaHub.svg, so the rules are inert on desktop. */
+.mitray-login .city {
+  fill: var(--flow);
+  filter: drop-shadow(0 0 6px var(--flow));
+}
+.mitray-login .arc-flow.out {
+  stroke-width: 2;
+}
+.mitray-login .srv {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.9);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mitray-login.play .srv {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease var(--d),
+    transform 0.6s cubic-bezier(0.3, 1.3, 0.4, 1) var(--d);
+}
+.mitray-login .cnode {
+  opacity: 0;
+}
+.mitray-login.play .cnode {
+  opacity: 1;
+  transition: opacity 0.6s ease var(--cd);
+}
+
+@keyframes ml-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ml-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+@keyframes ml-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}
+@keyframes ml-ruglow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes ml-jiggle {
+  0%,
+  78%,
+  100% {
+    transform: rotate(0);
+  }
+  82% {
+    transform: rotate(-9deg);
+  }
+  86% {
+    transform: rotate(7deg);
+  }
+  90% {
+    transform: rotate(-5deg);
+  }
+  94% {
+    transform: rotate(3deg);
+  }
+  97% {
+    transform: rotate(0);
+  }
+}
+
+/* ── stage ── */
+.mitray-login .stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+  padding: 24px;
+}
+.mitray-login .logo {
+  width: min(420px, 84vw);
+  height: auto;
+  overflow: visible;
+  display: block;
+  filter: drop-shadow(0 3px 18px rgba(0, 0, 0, 0.5));
+  transition:
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.5s ease;
+}
+.mitray-login .logo text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+.mitray-login .logo text.l2 {
+  letter-spacing: 7px;
+}
+.mitray-login .stroke {
+  fill: none;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+.mitray-login .l1.stroke {
+  stroke: var(--ink);
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+}
+.mitray-login .l2.stroke {
+  stroke: var(--accent);
+  stroke-dasharray: 1100;
+  stroke-dashoffset: 1100;
+}
+.mitray-login .l1.fill {
+  fill: var(--ink);
+  opacity: 0;
+}
+.mitray-login .l2.fill {
+  fill: var(--accent);
+  opacity: 0;
+}
+
+.mitray-login .actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.mitray-login .btn {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.3s ease,
+    background 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease;
+}
+.mitray-login .btn:active {
+  transform: translateY(0) scale(0.98);
+}
+.mitray-login .btn-tg {
+  background: var(--pill);
+  color: var(--pill-ink);
+  border-radius: 999px;
+  padding: 15.5px 28px;
+  box-shadow: 0 10px 40px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.mitray-login .btn-tg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px -10px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+.mitray-login .btn-qr {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.mitray-login .btn-qr:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 10px 30px -12px var(--accent);
+}
+.mitray-login .btn-qr.on {
+  background: var(--accent);
+  color: var(--pill-ink);
+  border-color: var(--accent);
+}
+.mitray-login .weblink {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-transform: uppercase;
+  padding: 4px;
+  transition: color 0.3s ease;
+}
+.mitray-login .weblink:hover {
+  color: var(--ink);
+}
+.mitray-login .weblink span {
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: border-color 0.3s ease;
+}
+.mitray-login .weblink:hover span {
+  border-color: var(--ink);
+}
+
+.mitray-login .qr-pop {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translate(-50%, 8px) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.45);
+  transition:
+    opacity 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-login .qr-pop.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  pointer-events: auto;
+}
+.mitray-login .qr-cap {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── tools (theme / replay) ── */
+.mitray-login .tools {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+}
+.mitray-login .tool {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.25s,
+    border-color 0.25s,
+    transform 0.25s,
+    background 0.4s;
+}
+.mitray-login .tool:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ── intro animation ── */
+.mitray-login .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-login.play .bg {
+  animation: ml-fadein 1.8s ease 1.3s forwards;
+}
+.mitray-login.play .b1 {
+  animation: ml-drift1 30s ease-in-out 1.3s infinite;
+}
+.mitray-login.play .b2 {
+  animation: ml-drift2 34s ease-in-out 1.5s infinite;
+}
+.mitray-login.play .l1.stroke {
+  animation: ml-draw 1.7s cubic-bezier(0.6, 0.04, 0.18, 1) 0.25s forwards;
+}
+.mitray-login.play .l2.stroke {
+  animation: ml-draw 1.5s cubic-bezier(0.6, 0.04, 0.18, 1) 0.65s forwards;
+}
+.mitray-login.play .l1.fill {
+  animation: ml-fillin 0.9s ease 1.25s forwards;
+}
+.mitray-login.play .l2.fill {
+  animation: ml-fillin 0.9s ease 1.55s forwards;
+}
+.mitray-login.play .a1 {
+  animation: ml-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 1.95s forwards;
+}
+.mitray-login.play .a2 {
+  animation: ml-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 2.1s forwards;
+}
+.mitray-login.play .tools {
+  animation: ml-fadein 0.8s ease 2.3s forwards;
+}
+@keyframes ml-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ml-fillin {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ml-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ml-fadein {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ml-drift1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(40px, -30px);
+  }
+}
+@keyframes ml-drift2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-36px, 26px);
+  }
+}
+
+/* ── landing ⇄ auth morph ── */
+.mitray-login .landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  transition:
+    opacity 0.35s ease,
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-login .stage {
+  transition:
+    opacity 0.4s ease,
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-login.auth .stage {
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+/* Perf: the map is blurred behind the open card — stop its per-frame repaints
+   (stroke/fill/filter animations) while it isn't really visible. */
+.mitray-login.auth .arc-flow,
+.mitray-login.auth .spot-ring,
+.mitray-login.auth .cc.ru,
+.mitray-login.auth .ru-glow,
+.mitray-login.auth .lock,
+.mitray-login.auth-closing .arc-flow,
+.mitray-login.auth-closing .spot-ring,
+.mitray-login.auth-closing .cc.ru,
+.mitray-login.auth-closing .ru-glow,
+.mitray-login.auth-closing .lock {
+  animation: none;
+}
+
+/* Auth open/close = compositor-only moves: the bg scales (transform), the
+   crisp map crossfades into its pre-blurred twin, and the landing veil
+   crossfades into the stronger auth veil. NO animated filter, NO gradient
+   interpolation — those repainted the full screen every frame (PC jank). */
+.mitray-login .bg {
+  transition:
+    opacity 1.8s ease,
+    transform 0.9s cubic-bezier(0.55, 0.05, 0.15, 1);
+  will-change: transform;
+}
+.mitray-login.auth .bg {
+  transform: scale(1.07);
+}
+.mitray-login .bg > .map {
+  transition: opacity 0.7s ease;
+}
+.mitray-login.auth .bg > .map {
+  opacity: 0;
+}
+.mitray-login.auth .map-blur {
+  opacity: 1;
+}
+.mitray-login .veil,
+.mitray-login .veil-auth {
+  transition: opacity 0.6s ease;
+}
+.mitray-login.auth .veil {
+  opacity: 0;
+}
+.mitray-login.auth .veil-auth {
+  opacity: 1;
+}
+
+/* ── leaving: successful auth → hand the wordmark to the dashboard intro ──
+   Everything but the visible logo fades to the page canvas (same token as the
+   intro overlay's bg, so the cut is invisible); Login stores the logo rect and
+   IntroLoader glides it from there into the loader position (see intro.css). */
+.mitray-login.leaving {
+  pointer-events: none;
+}
+.mitray-login.leaving .bg,
+.mitray-login.leaving .landing,
+.mitray-login.leaving .tools,
+.mitray-login.leaving .lang-slot,
+.mitray-login.leaving .auth-card,
+.mitray-login.leaving .ac-line {
+  opacity: 0 !important;
+  transition: opacity 0.38s ease !important;
+}
+
+/* Auth layer: a scrollable column holding the (small) logo + card. When the
+   column is shorter than the viewport it's centered (margin:auto); when it's
+   taller (register form / short window) the whole column scrolls as one unit —
+   nothing clips, and the logo scrolls with it. No scrollbar until the card is
+   actually open. */
+.mitray-login .auth-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  padding: 24px;
+  overflow: hidden;
+  pointer-events: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.mitray-login.auth .auth-wrap {
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.mitray-login .auth-wrap::-webkit-scrollbar {
+  width: 8px;
+}
+.mitray-login .auth-wrap::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+.mitray-login .auth-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mitray-login .auth-col {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: min(406px, 92vw);
+}
+.mitray-login .logo-sm {
+  width: 180px;
+  height: auto;
+  overflow: visible;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.5s ease 0.1s,
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s;
+  filter: drop-shadow(0 3px 14px rgba(0, 0, 0, 0.5));
+}
+.mitray-login.auth .logo-sm {
+  opacity: 1;
+  transform: none;
+}
+.mitray-login .logo-sm text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+.mitray-login .logo-sm .ls1 {
+  fill: var(--ink);
+}
+.mitray-login .logo-sm .ls2 {
+  fill: var(--accent);
+  letter-spacing: 7px;
+}
+.mitray-login .auth-card {
+  position: relative;
+  width: 100%;
+  padding: 26px 24px 20px;
+  border-radius: 26px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg2) 86%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.65);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px) scale(0.96);
+  transform-origin: center;
+  transition:
+    opacity 0.4s ease,
+    transform 0.55s cubic-bezier(0.2, 0.78, 0.25, 1);
+}
+.mitray-login.auth .auth-card {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+/* Desktop: drop the card's live backdrop blur — behind it the map is ALREADY
+   pre-blurred (.map-blur) and heavily dimmed (.veil-auth), so backdrop sampling
+   added ~nothing visually but re-blurred the card-sized region EVERY frame
+   while the card fades/moves (open/close) or resizes (register toggle) — the
+   main desktop FPS eater. A touch more panel opacity compensates. Mobile keeps
+   the true glass: small screens are cheap and the hub behind stays crisp. */
+@media (min-width: 769px) {
+  .mitray-login .auth-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--bg2) 93%, transparent);
+  }
+}
+
+.mitray-login .ac-line {
+  position: absolute;
+  top: 0;
+  left: 26px;
+  right: 26px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  box-shadow: 0 0 14px var(--accent);
+  transform: scaleX(0);
+  opacity: 0;
+  transition:
+    transform 0.7s cubic-bezier(0.6, 0.04, 0.18, 1) 0.12s,
+    opacity 0.4s ease 0.12s;
+}
+.mitray-login.auth .ac-line {
+  transform: scaleX(1);
+  opacity: 0.95;
+}
+
+.mitray-login .back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.25s;
+}
+.mitray-login .back:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  transform: translateX(-1px);
+}
+.mitray-login .ac-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
+
+/* card buttons (Telegram / Google wrappers) */
+.mitray-login .fbtn,
+.mitray-login .fbtn * {
+  font-family: inherit;
+}
+.mitray-login .fbtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15.5px;
+  cursor: pointer;
+  border-radius: 14px;
+  padding: 13px 18px;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.3s,
+    border-color 0.3s,
+    background 0.3s;
+}
+.mitray-login .fbtn:active {
+  transform: scale(0.985);
+}
+.mitray-login .fbtn-tg {
+  background: var(--pill);
+  color: var(--pill-ink);
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.mitray-login .fbtn-tg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 42px -12px color-mix(in srgb, var(--accent) 88%, transparent);
+}
+.mitray-login .fbtn-tg:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+.mitray-login .fbtn-google {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  margin-top: 11px;
+}
+.mitray-login .fbtn-google:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.mitray-login .gbadge {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border-radius: 6px;
+  flex: none;
+}
+
+/* Telegram row: pill + QR-auth button */
+.mitray-login .tg-row {
+  display: flex;
+  gap: 10px;
+}
+.mitray-login .tg-row .fbtn-tg {
+  flex: 1;
+}
+.mitray-login .cqr-wrap {
+  position: relative;
+  flex: none;
+}
+.mitray-login .cqr {
+  width: 50px;
+  height: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.3s,
+    color 0.3s,
+    background 0.3s;
+}
+.mitray-login .cqr:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+.mitray-login .cqr.on {
+  background: var(--accent);
+  color: var(--pill-ink);
+  border-color: var(--accent);
+}
+.mitray-login .cqr-pop {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  transform-origin: top right;
+  z-index: 4;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.96);
+  transition:
+    opacity 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-login .cqr-pop.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.mitray-login .divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 13px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.mitray-login .divider::before,
+.mitray-login .divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.mitray-login .tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border-radius: 13px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.mitray-login .tab {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--muted);
+  padding: 9px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition:
+    color 0.25s,
+    background 0.3s;
+}
+.mitray-login .tab.on {
+  background: var(--accent);
+  color: var(--pill-ink);
+}
+
+.mitray-login .field {
+  margin-bottom: 12px;
+}
+.mitray-login .lab {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 6px 2px;
+  letter-spacing: 0.02em;
+}
+.mitray-login .inp {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background 0.25s;
+}
+.mitray-login .inp::placeholder {
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+.mitray-login .inp:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.mitray-login .reg-only {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.42s cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 0.3s ease;
+}
+.mitray-login .reg-only .reg-inner {
+  overflow: hidden;
+}
+.mitray-login.mode-register .reg-only {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.mitray-login .submit {
+  width: 100%;
+  margin-top: 4px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15.5px;
+  color: var(--pill-ink);
+  border: none;
+  border-radius: 14px;
+  padding: 13px;
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, var(--accent2))
+  );
+  box-shadow: 0 12px 32px -12px var(--accent);
+  transition:
+    transform 0.25s,
+    box-shadow 0.3s;
+}
+.mitray-login .submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 44px -12px var(--accent);
+}
+.mitray-login .submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+.mitray-login .forgot {
+  text-align: center;
+  margin-top: 13px;
+}
+.mitray-login .forgot button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.mitray-login .forgot button:hover {
+  color: var(--ink);
+}
+.mitray-login .err {
+  margin-bottom: 14px;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--color-error-500) / 0.3);
+  background: rgb(var(--color-error-500) / 0.12);
+  color: rgb(var(--color-error-400));
+  padding: 10px 14px;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+/* staggered entrance of card content */
+.mitray-login .auth-card .st {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.45s ease,
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-login.auth .auth-card .st {
+  opacity: 1;
+  transform: none;
+}
+.mitray-login.auth .auth-card .d1 {
+  transition-delay: 0.1s;
+}
+.mitray-login.auth .auth-card .d2 {
+  transition-delay: 0.17s;
+}
+.mitray-login.auth .auth-card .d3 {
+  transition-delay: 0.24s;
+}
+.mitray-login.auth .auth-card .d4 {
+  transition-delay: 0.31s;
+}
+
+/* language switcher slot */
+.mitray-login .lang-slot {
+  position: fixed;
+  top: 18px;
+  right: 110px;
+  z-index: 6;
+  opacity: 0;
+}
+.mitray-login.play .lang-slot {
+  animation: ml-fadein 0.8s ease 2.3s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-login .stroke {
+    stroke-dashoffset: 0 !important;
+  }
+  .mitray-login .reveal,
+  .mitray-login .fill {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .mitray-login .bg,
+  .mitray-login .tools,
+  .mitray-login .lang-slot {
+    opacity: 1 !important;
+  }
+  .mitray-login * {
+    animation: none !important;
+  }
+  /* hub scene reveals rely on .play (which may be skipped under reduced motion) —
+     force its nodes visible so the mobile map isn't left blank. */
+  .mitray-login .map-hub {
+    transform: none !important;
+  }
+  .mitray-login .srv,
+  .mitray-login .cnode {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .mitray-login .logo,
+  .mitray-login .bg,
+  .mitray-login .veil,
+  .mitray-login .veil-auth,
+  .mitray-login .map-blur,
+  .mitray-login .bg > .map,
+  .mitray-login .landing,
+  .mitray-login .auth-card,
+  .mitray-login .ac-line,
+  .mitray-login .auth-card .st,
+  .mitray-login .reg-only {
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* ── mobile: swap the horizontal EU+Russia map for the full-Russia hub scene ── */
+@media (max-width: 768px) {
+  .mitray-login .map,
+  .mitray-login .map-blur {
+    display: none;
+  }
+  .mitray-login .map-hub {
+    display: block;
+  }
+  /* portrait veil — protects the wordmark/card, keeps the hub edges bright */
+  .mitray-login .veil {
+    background: radial-gradient(
+      ellipse 64% 26% at 50% 52%,
+      color-mix(in srgb, var(--bg) 88%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 42%, transparent) 58%,
+      transparent 80%
+    );
+  }
+  /* QR dropped on mobile (landing hero + auth-card Telegram row) — pointless on
+     a phone; .cqr-wrap is shared by both surfaces. */
+  .mitray-login .cqr-wrap {
+    display: none;
+  }
+  /* tighter hero to match the prototype: smaller wordmark, closer to the CTA */
+  .mitray-login .stage {
+    gap: 26px;
+  }
+  .mitray-login .logo {
+    width: min(330px, 80vw);
+  }
+}
+
+/* larger screens — scale the logo / landing up (prototype 2K sizing) */
+@media (min-width: 1921px) {
+  .mitray-login .logo {
+    width: min(594px, 90vw);
+    /* 2K uniquely TRANSFORMS the hero logo on auth open (below) and the logo
+       carries a drop-shadow filter — pre-promote so the flight composites
+       instead of re-rasterizing a ~600px filtered SVG every frame */
+    will-change: transform;
+  }
+  .mitray-login.auth .logo {
+    transform: translateY(-35vh) scale(0.34);
+  }
+  .mitray-login .btn {
+    font-size: 16.5px;
+  }
+  .mitray-login .btn-tg {
+    padding: 17px 31px;
+  }
+  .mitray-login .btn-qr {
+    width: 59px;
+    height: 59px;
+  }
+  .mitray-login .weblink {
+    font-size: 14.8px;
+  }
+}

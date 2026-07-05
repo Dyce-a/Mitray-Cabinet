@@ -1,0 +1,383 @@
+/* ============================================================================
+   Mitray VPN — Connection / Installation screen (redesign). Ported from
+   design-lab/connect.html. Scoped to .mitray-conn. Only the SHELL is restyled
+   (crumb + title + QR + platform select + app chips + state screens); the
+   step blocks stay Remnawave-driven (InstallationGuide block renderers). Palette
+   pinned to prototype hex (dark + light) per the palette gotcha.
+   ========================================================================== */
+
+.mitray-conn {
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.light .mitray-conn {
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* page head */
+.mitray-conn .conn-crumb {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.mitray-conn .conn-crumb b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.mitray-conn .conn-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mitray-conn .conn-title-row h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 160px;
+}
+.mitray-conn .conn-back,
+.mitray-conn .qrbtn {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 13px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mitray-conn .conn-back:hover,
+.mitray-conn .qrbtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* platform select */
+.mitray-conn .plat {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.mitray-conn .plat select {
+  appearance: none;
+  height: 46px;
+  padding: 0 40px 0 42px;
+  border-radius: 13px;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  outline: none;
+  transition: 0.2s;
+}
+.mitray-conn .plat select:hover {
+  border-color: var(--accent);
+}
+.mitray-conn .plat .pico {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+  width: 18px;
+  height: 18px;
+}
+.mitray-conn .plat .pico > svg {
+  width: 100%;
+  height: 100%;
+}
+.mitray-conn .plat .pchev {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+}
+
+/* reveal */
+.mitray-conn .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-conn.in .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-conn.in .d1 {
+  transition-delay: 0.05s;
+}
+.mitray-conn.in .d2 {
+  transition-delay: 0.12s;
+}
+.mitray-conn.in .d3 {
+  transition-delay: 0.19s;
+}
+
+/* app chips */
+.mitray-conn .apps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0 22px;
+}
+.mitray-conn .app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition:
+    transform 0.18s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.mitray-conn .app:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+}
+.mitray-conn .app.on {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.mitray-conn .app .dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.mitray-conn .app .an {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-conn .app .alogo {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  opacity: 0.4;
+  color: var(--faint);
+}
+.mitray-conn .app.on .alogo {
+  color: var(--accent);
+  opacity: 0.9;
+}
+.mitray-conn .app .alogo > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* tutorial button (full width) */
+.mitray-conn .conn-tut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 46px;
+  border-radius: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition: border-color 0.2s;
+  margin-bottom: 22px;
+}
+.mitray-conn .conn-tut:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* dynamic note */
+.mitray-conn .dyn-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  background: var(--panel2);
+  border: 1px dashed var(--line2);
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.mitray-conn .dyn-note svg {
+  flex: none;
+}
+
+/* state screens (loading / error / no-sub) */
+.mitray-conn.state {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mitray-conn .conn-state {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 420px;
+}
+.mitray-conn .conn-state .ic {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.mitray-conn .conn-state h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.mitray-conn .conn-state p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.mitray-conn .conn-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--pill-ink);
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 12px 28px -12px var(--accent);
+  transition: transform 0.2s;
+}
+.mitray-conn .conn-btn:hover {
+  transform: translateY(-2px);
+}
+.mitray-conn .conn-loader {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+.mitray-conn .conn-spin {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--line2);
+  border-top-color: var(--accent);
+  animation: conn-spin 0.8s linear infinite;
+}
+@keyframes conn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── phone shell (matches design-lab/mobile/connect.html) ── */
+@media (max-width: 640px) {
+  .mitray-conn .conn-title-row h1 {
+    font-size: 23px;
+  }
+  /* QR is pointless on a phone — import happens via the "Add subscription"
+     step button; the platform select becomes a full-width row below the title */
+  .mitray-conn .qrbtn {
+    display: none;
+  }
+  .mitray-conn .plat {
+    flex-basis: 100%;
+    margin-top: 2px;
+  }
+  .mitray-conn .plat select {
+    width: 100%;
+  }
+  /* app chips stay 2-up (prototype), tighter density */
+  .mitray-conn .apps {
+    gap: 10px;
+    margin: 16px 0 18px;
+  }
+  .mitray-conn .app {
+    gap: 9px;
+    padding: 13px 14px;
+    border-radius: 14px;
+  }
+  .mitray-conn .app .an {
+    font-size: 14px;
+  }
+  .mitray-conn .app .alogo {
+    width: 22px;
+    height: 22px;
+  }
+  .mitray-conn .conn-tut {
+    height: 48px;
+    margin-bottom: 18px;
+  }
+  .mitray-conn .dyn-note {
+    margin-top: 18px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mitray-conn * {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}

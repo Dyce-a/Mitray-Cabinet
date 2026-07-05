@@ -1,0 +1,44 @@
+/* ============================================================================
+   Mitray VPN — brand background. Almost-black canvas (body = dark-950) + two soft
+   blurred corner blobs (iris accent + cyan glow), matching the design-lab
+   prototypes' `.bg`/`.blob`. Replaces the configurable animated background
+   (aurora/beams) on redesign screens. Rendered via portal to <body> at z-index
+   -2 (behind the faint noise texture at -1). Static (no animation) → composites
+   once, cheap even on low-end phones.
+   ========================================================================== */
+
+.brand-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.brand-bg .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+}
+.brand-bg .b1 {
+  width: 420px;
+  height: 420px;
+  left: -140px;
+  top: -90px;
+  opacity: 0.2;
+  background: radial-gradient(circle, rgb(var(--color-accent-400)), transparent 68%);
+}
+.brand-bg .b2 {
+  width: 400px;
+  height: 400px;
+  right: -140px;
+  top: 36%;
+  opacity: 0.16;
+  background: radial-gradient(circle, #63e6e2, transparent 68%);
+}
+.light .brand-bg .b1 {
+  opacity: 0.28;
+}
+.light .brand-bg .b2 {
+  opacity: 0.22;
+  background: radial-gradient(circle, #15b8cb, transparent 68%);
+}

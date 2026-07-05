@@ -76,21 +76,31 @@ export function ServerManagementSheet({
 
   if (!open) {
     return (
-      <button
-        onClick={onOpen}
-        className={`w-full rounded-xl border p-4 text-left transition-colors ${isDark ? 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600' : 'border-champagne-300/60 bg-champagne-200/40 hover:border-champagne-400'}`}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-dark-100">
-              {t('subscription.additionalOptions.manageServers')}
-            </div>
-            <div className="mt-1 text-sm text-dark-400">
-              {t('subscription.servers', { count: subscription.servers?.length || 0 })}
-            </div>
-          </div>
-          <ChevronRightIcon className="text-dark-400" />
+      <button onClick={onOpen} className="opt">
+        <span className="ic">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="7" rx="1.5" />
+            <rect x="3" y="13" width="18" height="7" rx="1.5" />
+            <path d="M7 7.5h.01M7 16.5h.01" />
+          </svg>
+        </span>
+        <div className="tt">
+          <b>{t('subscription.additionalOptions.manageServers')}</b>
+          <p>{t('subscription.servers', { count: subscription.servers?.length || 0 })}</p>
         </div>
+        <span className="chev">
+          <ChevronRightIcon />
+        </span>
       </button>
     );
   }

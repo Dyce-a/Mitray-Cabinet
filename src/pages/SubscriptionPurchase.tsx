@@ -1,11 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { subscriptionApi } from '../api/subscription';
-import { WebBackButton } from '../components/WebBackButton';
-import { getGlassColors } from '../utils/glassTheme';
-import { useTheme } from '../hooks/useTheme';
 import type { Tariff, ClassicPurchaseOptions } from '../types';
 import { useCloseOnSuccessNotification } from '../store/successNotification';
 import { SwitchTariffSheet } from '../components/subscription/sheets/SwitchTariffSheet';
@@ -13,6 +10,8 @@ import { TariffPurchaseForm } from '../components/subscription/purchase/TariffPu
 import { TariffPickerGrid } from '../components/subscription/purchase/TariffPickerGrid';
 import { ClassicPurchaseWizard } from '../components/subscription/purchase/ClassicPurchaseWizard';
 import { ExclamationIcon, SparklesIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import '../styles/purchase.css';
 
 export default function SubscriptionPurchase() {
   const { t } = useTranslation();
@@ -20,8 +19,24 @@ export default function SubscriptionPurchase() {
   const subscriptionId = searchParams.get('subscriptionId')
     ? parseInt(searchParams.get('subscriptionId')!, 10)
     : undefined;
-  const { isDark } = useTheme();
-  const g = getGlassColors(isDark);
+
+  // Reveal stagger — add `.in` to the root after first paint (see purchase.css).
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    // Double rAF: with a warm query cache the page renders in its first frame
+    // and a single rAF fires BEFORE that frame paints — .in would land in the
+    // initial paint and the stagger would have nothing to animate from.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   // Subscription query (shares cache with /subscription page)
   const { data: subscriptionResponse, isLoading } = useQuery({
@@ -60,69 +75,49 @@ export default function SubscriptionPurchase() {
   });
   const isMultiTariff = multiSubData?.multi_tariff_enabled ?? false;
 
-  // (active promo discount + applyPromoDiscount live in usePromoDiscount;
-  //  consumed directly by the sub-components, not threaded as props)
-
-  // (classic-mode state moved into <ClassicPurchaseWizard>)
-
   // Tariffs mode state
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null);
   const [showTariffPurchase, setShowTariffPurchase] = useState(false);
-  // (selectedTariffPeriod / customDays / customTrafficGb / useCustomDays /
-  //  useCustomTraffic moved into <TariffPurchaseForm>; form remounts with
-  //  fresh state via key=tariff.id when the parent picks a new tariff)
-
-  // (tariffPurchaseRef moved into <TariffPurchaseForm>; switch-modal ref
-  //  moved into <SwitchTariffSheet>)
 
   // Tariff switch
   const [switchTariffId, setSwitchTariffId] = useState<number | null>(null);
 
   // Auto-close all modals on success notification
   const handleCloseAllModals = () => {
-    // setShowPurchaseForm moved into <ClassicPurchaseWizard>'s own useCloseOnSuccessNotification
     setShowTariffPurchase(false);
     setSwitchTariffId(null);
-
     setSelectedTariff(null);
-    // (selectedTariffPeriod lives inside <TariffPurchaseForm> now; unmount clears it)
   };
   useCloseOnSuccessNotification(handleCloseAllModals);
 
-  // (switch preview query + switchTariffMutation moved into <SwitchTariffSheet>)
-
-  // (tariffPurchaseMutation moved into <TariffPurchaseForm>)
-  // (auto-scroll effects: switch-modal into <SwitchTariffSheet>,
-  //  tariff-purchase into <TariffPurchaseForm>)
-
-  // (classic-mode helpers moved into <ClassicPurchaseWizard>)
+  const pageTitle =
+    isMultiTariff && !subscriptionId
+      ? t('subscription.newTariff', 'Новый тариф')
+      : !isMultiTariff && subscription?.is_daily && !subscription?.is_trial
+        ? t('subscription.switchTariff.title')
+        : subscription && !subscription.is_trial
+          ? t('subscription.extend')
+          : t('subscription.getSubscription');
 
   if (isLoading || optionsLoading) {
     return (
-      <div className="flex min-h-64 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+      <div className="mitray-purchase">
+        <div className="p-loader">
+          <span className="p-spin" />
+        </div>
       </div>
     );
   }
 
   if (optionsError || (!purchaseOptions && !optionsLoading)) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('subscription.extend')}</h1>
-        <div
-          className="rounded-3xl p-6 text-center"
-          style={{
-            background: g.cardBg,
-            border: `1px solid ${g.cardBorder}`,
-          }}
-        >
-          <p className="mb-4 text-dark-300">
-            {t('subscription.loadError', 'Не удалось загрузить варианты подписки')}
-          </p>
-          <button
-            onClick={() => refetchOptions()}
-            className="rounded-xl bg-accent-500 px-6 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-600"
-          >
+      <div className={cn('mitray-purchase', revealed && 'in')}>
+        <div className="phead">
+          <h1>{t('subscription.extend')}</h1>
+        </div>
+        <div className="card pstate reveal d1" style={{ marginTop: 18 }}>
+          <p>{t('subscription.loadError', 'Не удалось загрузить варианты подписки')}</p>
+          <button className="p-btn" onClick={() => refetchOptions()}>
             {t('common.retry')}
           </button>
         </div>
@@ -130,124 +125,67 @@ export default function SubscriptionPurchase() {
     );
   }
 
+  const subscriptionIsExpired =
+    isTariffsMode &&
+    purchaseOptions &&
+    'subscription_is_expired' in purchaseOptions &&
+    purchaseOptions.subscription_is_expired === true;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <WebBackButton
-          to={subscriptionId ? `/subscriptions/${subscriptionId}` : '/subscriptions'}
-        />
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
-          {isMultiTariff && !subscriptionId
-            ? t('subscription.newTariff', 'Новый тариф')
-            : !isMultiTariff && subscription?.is_daily && !subscription?.is_trial
-              ? t('subscription.switchTariff.title')
-              : subscription && !subscription.is_trial
-                ? t('subscription.extend')
-                : t('subscription.getSubscription')}
-        </h1>
+    <div className={cn('mitray-purchase space-y-4', revealed && 'in')}>
+      {/* Head */}
+      <div className="phead reveal d1">
+        <div className="crumb">
+          {t('nav.cabinet', 'Кабинет')} ·{' '}
+          <Link to="/subscriptions" style={{ color: 'inherit' }}>
+            {t('nav.subscription', 'Подписки')}
+          </Link>{' '}
+          · <b>{pageTitle}</b>
+        </div>
+        <h1>{pageTitle}</h1>
       </div>
 
-      {/* Tariffs Section */}
+      {/* Tariffs mode */}
       {isTariffsMode && tariffs.length > 0 && (
-        <div
-          className="relative overflow-hidden rounded-3xl"
-          style={{
-            background: g.cardBg,
-            border: `1px solid ${g.cardBorder}`,
-            boxShadow: g.shadow,
-            padding: '24px 28px',
-          }}
-        >
-          {/* Trial upgrade prompt — hidden when expired banner is active */}
-          {subscription?.is_trial &&
-            !(
-              isTariffsMode &&
-              purchaseOptions &&
-              'subscription_is_expired' in purchaseOptions &&
-              purchaseOptions.subscription_is_expired
-            ) && (
-              <div
-                className="mb-6 rounded-[14px] p-4"
-                style={{
-                  background:
-                    'linear-gradient(135deg, rgba(255,184,0,0.08), rgba(var(--color-accent-400),0.06))',
-                  border: '1px solid rgba(255,184,0,0.15)',
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px]"
-                    style={{
-                      background: 'rgba(255,184,0,0.12)',
-                      color: 'rgb(var(--color-urgent-400))',
-                    }}
-                  >
-                    <SparklesIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm font-semibold"
-                      style={{ color: 'rgb(var(--color-urgent-400))' }}
-                    >
-                      {t('subscription.trialUpgrade.title')}
-                    </div>
-                    <div className="mt-1 text-[12px] text-dark-50/40">
-                      {t('subscription.trialUpgrade.description')}
-                    </div>
-                  </div>
-                </div>
+        <div className="space-y-4">
+          {/* Trial upgrade prompt — hidden when the expired banner is active */}
+          {subscription?.is_trial && !subscriptionIsExpired && (
+            <div className="banner warn reveal d1">
+              <span className="bi">
+                <SparklesIcon className="h-[22px] w-[22px]" />
+              </span>
+              <div>
+                <b>{t('subscription.trialUpgrade.title')}</b>
+                <p>{t('subscription.trialUpgrade.description')}</p>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Expired subscription notice */}
-          {isTariffsMode &&
-            purchaseOptions &&
-            'subscription_is_expired' in purchaseOptions &&
-            purchaseOptions.subscription_is_expired && (
-              <div
-                className="mb-6 rounded-[14px] p-4"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,59,92,0.08), rgba(255,184,0,0.06))',
-                  border: '1px solid rgba(255,59,92,0.15)',
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px]"
-                    style={{
-                      background: 'rgba(255,59,92,0.12)',
-                      color: 'rgb(var(--color-critical-500))',
-                    }}
-                  >
-                    <ExclamationIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm font-semibold"
-                      style={{ color: 'rgb(var(--color-critical-500))' }}
-                    >
-                      {t('subscription.expiredBanner.title')}
-                    </div>
-                    <div className="mt-1 text-[12px] text-dark-50/40">
-                      {t('subscription.expiredBanner.selectTariff')}
-                    </div>
-                  </div>
-                </div>
+          {subscriptionIsExpired && (
+            <div className="banner expired reveal d1">
+              <span className="bi">
+                <ExclamationIcon className="h-[22px] w-[22px]" />
+              </span>
+              <div>
+                <b>{t('subscription.expiredBanner.title')}</b>
+                <p>{t('subscription.expiredBanner.selectTariff')}</p>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Legacy subscription notice */}
           {subscription && !subscription.is_trial && !subscription.tariff_id && (
-            <div className="mb-6 rounded-xl border border-accent-500/30 bg-accent-500/10 p-4">
-              <div className="mb-2 font-medium text-accent-400">
-                {t('subscription.legacy.selectTariffTitle')}
-              </div>
-              <div className="text-sm text-dark-300">
-                {t('subscription.legacy.selectTariffDescription')}
-              </div>
-              <div className="mt-2 text-xs text-dark-500">
-                {t('subscription.legacy.currentSubContinues')}
+            <div className="banner info reveal d1">
+              <span className="bi">
+                <SparklesIcon className="h-[22px] w-[22px]" />
+              </span>
+              <div>
+                <b>{t('subscription.legacy.selectTariffTitle')}</b>
+                <p>
+                  {t('subscription.legacy.selectTariffDescription')}{' '}
+                  {t('subscription.legacy.currentSubContinues')}
+                </p>
               </div>
             </div>
           )}
@@ -265,38 +203,45 @@ export default function SubscriptionPurchase() {
             }}
           />
 
+          {/* Keyed .view-swap wrappers replay a rise-in animation on every
+              list ⇄ period-form switch (the prototype's animateIn) — without
+              them the other view popped in instantly because the page-level
+              `.in` reveal had already fired. */}
           {!showTariffPurchase ? (
-            <TariffPickerGrid
-              tariffs={tariffs}
-              subscription={subscription}
-              purchaseOptions={purchaseOptions}
-              isTariffsMode={isTariffsMode}
-              isMultiTariff={isMultiTariff}
-              onSelectTariff={(tariff) => {
-                setSelectedTariff(tariff);
-                setShowTariffPurchase(true);
-              }}
-              onSwitchTariff={(tariffId) => setSwitchTariffId(tariffId)}
-            />
+            <div key="tariff-grid" className="view-swap">
+              <TariffPickerGrid
+                tariffs={tariffs}
+                subscription={subscription}
+                purchaseOptions={purchaseOptions}
+                isTariffsMode={isTariffsMode}
+                isMultiTariff={isMultiTariff}
+                onSelectTariff={(tariff) => {
+                  setSelectedTariff(tariff);
+                  setShowTariffPurchase(true);
+                }}
+                onSwitchTariff={(tariffId) => setSwitchTariffId(tariffId)}
+              />
+            </div>
           ) : (
             selectedTariff && (
-              /* Tariff Purchase Form (extracted into its own component) */
-              <TariffPurchaseForm
-                key={selectedTariff.id}
-                tariff={selectedTariff}
-                subscriptionId={subscriptionId}
-                balanceKopeks={purchaseOptions?.balance_kopeks}
-                onBack={() => {
-                  setShowTariffPurchase(false);
-                  setSelectedTariff(null);
-                }}
-              />
+              <div key={`tariff-form-${selectedTariff.id}`} className="view-swap">
+                <TariffPurchaseForm
+                  key={selectedTariff.id}
+                  tariff={selectedTariff}
+                  subscriptionId={subscriptionId}
+                  balanceKopeks={purchaseOptions?.balance_kopeks}
+                  onBack={() => {
+                    setShowTariffPurchase(false);
+                    setSelectedTariff(null);
+                  }}
+                />
+              </div>
             )
           )}
         </div>
       )}
 
-      {/* Purchase/Extend Section - Classic Mode */}
+      {/* Classic mode */}
       {classicOptions && classicOptions.periods.length > 0 && (
         <ClassicPurchaseWizard
           classicOptions={classicOptions}
@@ -310,20 +255,9 @@ export default function SubscriptionPurchase() {
         !optionsLoading &&
         !(isTariffsMode && tariffs.length > 0) &&
         !(classicOptions && classicOptions.periods.length > 0) && (
-          <div
-            className="rounded-3xl p-6 text-center"
-            style={{
-              background: g.cardBg,
-              border: `1px solid ${g.cardBorder}`,
-            }}
-          >
-            <p className="mb-4 text-dark-300">
-              {t('subscription.noOptionsAvailable', 'Нет доступных вариантов подписки')}
-            </p>
-            <button
-              onClick={() => refetchOptions()}
-              className="rounded-xl bg-accent-500 px-6 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-600"
-            >
+          <div className="card pstate reveal d1">
+            <p>{t('subscription.noOptionsAvailable', 'Нет доступных вариантов подписки')}</p>
+            <button className="p-btn" onClick={() => refetchOptions()}>
               {t('common.retry')}
             </button>
           </div>

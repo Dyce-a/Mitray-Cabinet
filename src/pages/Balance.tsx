@@ -2,19 +2,35 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import { useAuthStore } from '../store/auth';
 import { balanceApi } from '../api/balance';
 import { useCurrency } from '../hooks/useCurrency';
 import { API } from '../config/constants';
+import { cn } from '@/lib/utils';
 import type { PaginatedResponse, Transaction } from '../types';
-
-import { Card } from '@/components/data-display/Card';
-import { Button } from '@/components/primitives/Button';
-import { ChevronDownIcon, ChevronRightIcon, CreditCardIcon, WalletIcon } from '@/components/icons';
-import { staggerContainer, staggerItem } from '@/components/motion/transitions';
 import { isPaidStatus, isFailedStatus } from '../utils/paymentStatus';
+import '../styles/balance.css';
+
+// Transaction category → icon path (matches the prototype's four tx types).
+type TxCategory = 'dep' | 'com' | 'deb' | 'bon';
+const TX_ICON: Record<TxCategory, string> = {
+  dep: 'M12 5v14M5 12l7 7 7-7',
+  deb: 'M12 19V5M5 12l7-7 7 7',
+  com: 'M19 5L5 19M9 6.5A2.5 2.5 0 1 1 4 6.5a2.5 2.5 0 0 1 5 0zM20 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z',
+  bon: 'M12 3l2.2 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.5z',
+};
+
+function txCategory(tx: Transaction): TxCategory {
+  const type = (tx.type || '').toUpperCase();
+  const amt = tx.amount_rubles;
+  if (type === 'REFERRAL_REWARD') return 'com';
+  if (amt > 0 && /BONUS|WHEEL|PROMO|GIFT|CASHBACK|LOTTERY/.test(type)) return 'bon';
+  if (amt < 0) return 'deb';
+  return 'dep';
+}
+
+const isCryptoMethod = (id: string) => /crypto|usdt|ton|btc|coin/i.test(id);
 
 export default function Balance() {
   const { t } = useTranslation();
@@ -24,6 +40,24 @@ export default function Balance() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const paymentHandledRef = useRef(false);
+
+  // Reveal stagger (CSS-driven, see balance.css).
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    // Double rAF: with a warm query cache the page renders in its first frame
+    // and a single rAF fires BEFORE that frame paints — .in would land in the
+    // initial paint and the stagger would have nothing to animate from.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   // Fetch balance from API
   const { data: balanceData, refetch: refetchBalance } = useQuery({
@@ -71,7 +105,7 @@ export default function Balance() {
   }> | null>(null);
   const [promoSelectCode, setPromoSelectCode] = useState<string | null>(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
   const { data: transactions, isLoading } = useQuery<PaginatedResponse<Transaction>>({
     queryKey: ['transactions', transactionsPage],
@@ -95,21 +129,6 @@ export default function Balance() {
 
   const normalizeType = (type: string) => type?.toUpperCase?.() ?? type;
 
-  const getTypeBadge = (type: string) => {
-    switch (normalizeType(type)) {
-      case 'DEPOSIT':
-        return 'badge-success';
-      case 'SUBSCRIPTION_PAYMENT':
-        return 'badge-info';
-      case 'REFERRAL_REWARD':
-        return 'badge-warning';
-      case 'WITHDRAWAL':
-        return 'badge-error';
-      default:
-        return 'badge-neutral';
-    }
-  };
-
   const getTypeLabel = (type: string) => {
     switch (normalizeType(type)) {
       case 'DEPOSIT':
@@ -122,6 +141,19 @@ export default function Balance() {
         return t('balance.withdrawal');
       default:
         return type;
+    }
+  };
+
+  const txTagLabel = (cat: TxCategory) => {
+    switch (cat) {
+      case 'dep':
+        return t('balance.deposit');
+      case 'deb':
+        return t('balance.txDebit', 'Списание');
+      case 'com':
+        return t('balance.txCommission', 'Комиссия');
+      case 'bon':
+        return t('balance.txBonus', 'Бонус');
     }
   };
 
@@ -195,127 +227,134 @@ export default function Balance() {
   };
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-    >
-      <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('balance.title')}</h1>
-      </motion.div>
+    <div className={cn('mitray-balance', revealed && 'in')}>
+      <div className="phead">
+        <h1>{t('balance.title')}</h1>
+      </div>
 
-      {/* Balance Card — flat surface; the giant numeric carries the
-          weight. The previous accent gradient + glow leaked accent into
-          decoration (DESIGN.md Tunable-but-Scarce Rule) and read as the
-          SaaS hero-metric template. */}
-      <motion.div variants={staggerItem}>
-        <Card>
-          <div className="mb-2 text-sm text-dark-400">{t('balance.currentBalance')}</div>
-          <div className="text-4xl font-bold text-dark-50 sm:text-5xl">
-            {formatAmount(balanceData?.balance_rubles || 0)}
-            <span className="ml-2 text-2xl text-dark-400">{currencySymbol}</span>
+      <div className="bal-grid">
+        {/* LEFT */}
+        <div className="col">
+          {/* Balance hero */}
+          <div className="card hero-bal reveal d1">
+            <div className="k-lbl">{t('balance.currentBalance')}</div>
+            <div className="amount">
+              {formatAmount(balanceData?.balance_rubles || 0)}
+              <span>{currencySymbol}</span>
+            </div>
           </div>
-        </Card>
-      </motion.div>
 
-      {/* Promo Code Section */}
-      <motion.div variants={staggerItem}>
-        <Card>
-          <h2 className="mb-4 text-lg font-semibold text-dark-100">
-            {t('balance.promocode.title')}
-          </h2>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={promocode}
-              onChange={(e) => setPromocode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handlePromocodeActivate()}
-              placeholder={t('balance.promocode.placeholder')}
-              className="input flex-1"
-              disabled={promocodeLoading}
-            />
-            <Button
-              onClick={() => handlePromocodeActivate()}
-              disabled={!promocode.trim()}
-              loading={promocodeLoading}
-            >
-              {t('balance.promocode.activate')}
-            </Button>
-          </div>
-          <AnimatePresence mode="wait">
-            {promocodeError && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-3 rounded-linear border border-error-500/30 bg-error-500/10 p-3 text-sm text-error-400"
+          {/* Transaction history */}
+          <div className={cn('card history reveal d3', !isHistoryOpen && 'collapsed')}>
+            <div className="card-h">
+              <div className="t">{t('balance.transactionHistory')}</div>
+              <button
+                className="collapse"
+                onClick={() => setIsHistoryOpen((v) => !v)}
+                aria-label={t('common.collapse', 'Свернуть')}
               >
-                {promocodeError}
-              </motion.div>
-            )}
-            {promocodeSuccess && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-3 rounded-linear border border-success-500/30 bg-success-500/10 p-3 text-sm text-success-400"
-              >
-                <div className="font-medium">{promocodeSuccess.message}</div>
-                {promocodeSuccess.amount > 0 && (
-                  <div className="mt-1">
-                    {t('balance.promocode.balanceAdded', {
-                      amount: promocodeSuccess.amount.toFixed(2),
-                    })}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 15l6-6 6 6" />
+                </svg>
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="tx-loader">
+                <div className="tx-spin" />
+              </div>
+            ) : transactions?.items && transactions.items.length > 0 ? (
+              <>
+                <div className="tx-list">
+                  {transactions.items.map((tx) => {
+                    const cat = txCategory(tx);
+                    const isPositive = tx.amount_rubles > 0;
+                    const displayAmount = Math.abs(tx.amount_rubles);
+                    const sign = tx.amount_rubles === 0 ? '' : isPositive ? '+' : '−';
+                    return (
+                      <div className="tx" key={tx.id}>
+                        <span className={`tx-ic ${cat}`}>
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d={TX_ICON[cat]} />
+                          </svg>
+                        </span>
+                        <div className="tx-main">
+                          <b>{tx.description || getTypeLabel(tx.type)}</b>
+                          <div className="tx-meta">
+                            <span className={`tx-tag ${cat}`}>{txTagLabel(cat)}</span>
+                            <span className="date">
+                              {new Date(tx.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={cn('tx-amt', !isPositive && 'neg')}>
+                          {sign}
+                          {formatAmount(displayAmount)} {currencySymbol}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {transactions && transactions.pages > 1 && (
+                  <div className="pager">
+                    <button
+                      onClick={() => setTransactionsPage((prev) => Math.max(1, prev - 1))}
+                      disabled={transactions.page <= 1}
+                    >
+                      {t('common.back')}
+                    </button>
+                    <div className="pg-info">
+                      {t('balance.page', {
+                        current: transactions.page,
+                        total: transactions.pages,
+                      })}
+                    </div>
+                    <button
+                      onClick={() =>
+                        setTransactionsPage((prev) =>
+                          transactions.pages ? Math.min(transactions.pages, prev + 1) : prev + 1,
+                        )
+                      }
+                      disabled={transactions.page >= transactions.pages}
+                    >
+                      {t('common.next')}
+                    </button>
                   </div>
                 )}
-              </motion.div>
+              </>
+            ) : (
+              <div className="tx-empty">{t('balance.noTransactions')}</div>
             )}
-          </AnimatePresence>
-          {promoSelectSubs && promoSelectSubs.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-3 space-y-2 rounded-linear border border-accent-500/30 bg-accent-500/10 p-3"
-            >
-              <div className="text-sm font-medium text-dark-200">
-                {t('balance.promocode.selectSubscription', 'К какой подписке применить промокод?')}
-              </div>
-              {promoSelectSubs.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => handlePromocodeActivate(sub.id)}
-                  disabled={promocodeLoading}
-                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-linear border border-dark-600 bg-dark-700 px-3 py-2 text-sm text-dark-200 transition-colors hover:border-accent-500/50 hover:bg-dark-600"
-                >
-                  <span className="truncate">{sub.tariff_name}</span>
-                  <span className="shrink-0 text-dark-400">
-                    {t('balance.promocode.daysLeft', '{{count}} дн.', { count: sub.days_left })}
-                  </span>
-                </button>
-              ))}
-              <button
-                onClick={() => {
-                  setPromoSelectSubs(null);
-                  setPromoSelectCode(null);
-                }}
-                className="text-xs text-dark-400 hover:text-dark-200"
-              >
-                {t('common.cancel', 'Отмена')}
-              </button>
-            </motion.div>
-          )}
-        </Card>
-      </motion.div>
+          </div>
+        </div>
 
-      {/* Payment Methods */}
-      {paymentMethods && paymentMethods.length > 0 && (
-        <motion.div variants={staggerItem}>
-          <Card>
-            <h2 className="mb-4 text-lg font-semibold text-dark-100">
-              {t('balance.topUpBalance')}
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* RIGHT */}
+        <div className="col">
+          {/* Top-up methods */}
+          {paymentMethods && paymentMethods.length > 0 && (
+            <div className="card reveal d2 topup">
+              <div className="card-h">
+                <div className="t">{t('balance.topUpBalance')}</div>
+              </div>
               {paymentMethods.map((method) => {
                 const methodKey = method.id.toLowerCase().replace(/-/g, '_');
                 const translatedName = t(`balance.paymentMethods.${methodKey}.name`, {
@@ -324,170 +363,233 @@ export default function Balance() {
                 const translatedDesc = t(`balance.paymentMethods.${methodKey}.description`, {
                   defaultValue: '',
                 });
-
+                const crypto = isCryptoMethod(method.id);
                 return (
-                  <Card
+                  <div
                     key={method.id}
-                    interactive={method.is_available}
-                    className={!method.is_available ? 'cursor-not-allowed opacity-50' : ''}
+                    className={cn('method', !method.is_available && 'disabled')}
                     onClick={() => method.is_available && navigate(`/balance/top-up/${method.id}`)}
+                    role="button"
+                    tabIndex={method.is_available ? 0 : -1}
+                    onKeyDown={(e) => {
+                      if (method.is_available && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        navigate(`/balance/top-up/${method.id}`);
+                      }
+                    }}
                   >
-                    <div className="font-semibold text-dark-100">
-                      {translatedName || method.name}
-                    </div>
-                    {(translatedDesc || method.description) && (
-                      <div className="mt-1 text-sm text-dark-500">
+                    <span className="mi">
+                      {crypto ? (
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M9.5 9.2c.4-1 1.5-1.5 2.6-1.5 1.4 0 2.4.8 2.4 2 0 2.5-4.6 1.8-4.6 4.3 0 1.2 1.1 2 2.5 2 1.1 0 2.1-.5 2.5-1.5M12 6v1.7M12 16.3V18" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="2" y="5" width="20" height="14" rx="2.5" />
+                          <path d="M2 10h20" />
+                        </svg>
+                      )}
+                    </span>
+                    <div className="mt">
+                      <b>{translatedName || method.name}</b>
+                      <p>
                         {translatedDesc || method.description}
-                      </div>
-                    )}
-                    <div className="mt-3 text-xs text-dark-400">
-                      {formatAmount(method.min_amount_kopeks / 100, 0)} {t('common.rangeTo', 'to')}{' '}
-                      {formatAmount(method.max_amount_kopeks / 100, 0)} {currencySymbol}
+                        {(translatedDesc || method.description) && ' · '}
+                        <span>
+                          {formatAmount(method.min_amount_kopeks / 100, 0)}&nbsp;–&nbsp;
+                          {formatAmount(method.max_amount_kopeks / 100, 0)} {currencySymbol}
+                        </span>
+                      </p>
                     </div>
-                  </Card>
+                    <span className="chev">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                  </div>
                 );
               })}
             </div>
-          </Card>
-        </motion.div>
-      )}
+          )}
 
-      {/* Transaction History */}
-      <motion.div variants={staggerItem}>
-        <Card className="overflow-hidden">
-          <button
-            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <h2 className="text-lg font-semibold text-dark-100">
-              {t('balance.transactionHistory')}
-            </h2>
-            <ChevronDownIcon
-              className={`h-5 w-5 text-dark-400 transition-transform duration-200 ${isHistoryOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-
-          <AnimatePresence>
-            {isHistoryOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
+          {/* Promo code */}
+          <div className="card reveal d4 promo-card">
+            <div className="card-h">
+              <div className="t">{t('balance.promocode.title')}</div>
+            </div>
+            <div className="promo-row">
+              <input
+                type="text"
+                value={promocode}
+                onChange={(e) => setPromocode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePromocodeActivate()}
+                placeholder={t('balance.promocode.placeholder')}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={promocodeLoading}
+              />
+              <button
+                className="promo-btn"
+                onClick={() => handlePromocodeActivate()}
+                disabled={!promocode.trim() || promocodeLoading}
               >
-                <div className="mt-4">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
-                    </div>
-                  ) : transactions?.items && transactions.items.length > 0 ? (
-                    <motion.div
-                      className="space-y-3"
-                      variants={staggerContainer}
-                      initial="initial"
-                      animate="animate"
-                    >
-                      {transactions.items.map((tx) => {
-                        const isZero = tx.amount_rubles === 0;
-                        const isPositive = tx.amount_rubles > 0;
-                        const displayAmount = Math.abs(tx.amount_rubles);
-                        const sign = isZero ? '' : isPositive ? '+' : '-';
-                        const colorClass = isZero
-                          ? 'text-dark-400'
-                          : isPositive
-                            ? 'text-success-400'
-                            : 'text-error-400';
+                {t('balance.promocode.activate')}
+              </button>
+            </div>
 
-                        return (
-                          <motion.div
-                            key={tx.id}
-                            variants={staggerItem}
-                            className="flex items-center justify-between rounded-linear border border-dark-700/30 bg-dark-800/30 p-4"
-                          >
-                            <div className="flex-1">
-                              <div className="mb-1 flex items-center gap-3">
-                                <span className={getTypeBadge(tx.type)}>
-                                  {getTypeLabel(tx.type)}
-                                </span>
-                                <span className="text-xs text-dark-500">
-                                  {new Date(tx.created_at).toLocaleDateString()}
-                                </span>
-                              </div>
-                              {tx.description && (
-                                <div className="text-sm text-dark-400">{tx.description}</div>
-                              )}
-                            </div>
-                            <div className={`text-lg font-semibold ${colorClass}`}>
-                              {sign}
-                              {formatAmount(displayAmount)} {currencySymbol}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  ) : (
-                    <div className="py-12 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-linear-lg bg-dark-800">
-                        <WalletIcon className="h-8 w-8 text-dark-500" />
-                      </div>
-                      <div className="text-dark-400">{t('balance.noTransactions')}</div>
-                    </div>
-                  )}
+            {promocodeError && <div className="promo-msg err show">{promocodeError}</div>}
+            {promocodeSuccess && (
+              <div className="promo-msg show">
+                <div>{promocodeSuccess.message}</div>
+                {promocodeSuccess.amount > 0 && (
+                  <div>
+                    {t('balance.promocode.balanceAdded', {
+                      amount: promocodeSuccess.amount.toFixed(2),
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                  {transactions && transactions.pages > 1 && (
-                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-dark-500">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setTransactionsPage((prev) => Math.max(1, prev - 1))}
-                        disabled={transactions.page <= 1}
-                        className="min-w-[120px] flex-1 sm:flex-none"
-                      >
-                        {t('common.back')}
-                      </Button>
-                      <div className="flex-1 text-center">
-                        {t('balance.page', {
-                          current: transactions.page,
-                          total: transactions.pages,
-                        })}
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setTransactionsPage((prev) =>
-                            transactions.pages ? Math.min(transactions.pages, prev + 1) : prev + 1,
-                          )
-                        }
-                        disabled={transactions.page >= transactions.pages}
-                        className="min-w-[120px] flex-1 sm:flex-none"
-                      >
-                        {t('common.next')}
-                      </Button>
-                    </div>
+            {promoSelectSubs && promoSelectSubs.length > 0 && (
+              <div className="promo-picker">
+                <div className="pk-t">
+                  {t(
+                    'balance.promocode.selectSubscription',
+                    'К какой подписке применить промокод?',
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
-      </motion.div>
-
-      {/* Saved Cards Navigation */}
-      {savedCardsData?.recurrent_enabled && (
-        <motion.div variants={staggerItem}>
-          <Card interactive onClick={() => navigate('/balance/saved-cards')}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CreditCardIcon className="h-5 w-5 text-dark-400" />
-                <span className="font-medium text-dark-100">{t('balance.savedCards.title')}</span>
+                {promoSelectSubs.map((sub) => (
+                  <button
+                    key={sub.id}
+                    className="pk"
+                    onClick={() => handlePromocodeActivate(sub.id)}
+                    disabled={promocodeLoading}
+                  >
+                    <span className="truncate">{sub.tariff_name}</span>
+                    <span className="pk-days">
+                      {t('balance.promocode.daysLeft', '{{count}} дн.', { count: sub.days_left })}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  className="pk-cancel"
+                  onClick={() => {
+                    setPromoSelectSubs(null);
+                    setPromoSelectCode(null);
+                  }}
+                >
+                  {t('common.cancel', 'Отмена')}
+                </button>
               </div>
-              <ChevronRightIcon className="h-5 w-5 text-dark-400" />
+            )}
+          </div>
+
+          {/* Saved cards */}
+          {savedCardsData?.recurrent_enabled && (
+            <div className="card reveal d5 saved-card">
+              <div
+                className="saved"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate('/balance/saved-cards')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate('/balance/saved-cards');
+                  }
+                }}
+              >
+                <span className="sv-l">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="2" y="5" width="20" height="14" rx="2.5" />
+                    <path d="M2 10h20" />
+                  </svg>
+                  {t('balance.savedCards.title')}
+                </span>
+                <span className="chev">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </span>
+              </div>
             </div>
-          </Card>
-        </motion.div>
-      )}
-    </motion.div>
+          )}
+
+          {/* Info note */}
+          <div className="card reveal d5 note-card">
+            <div className="note">
+              <span className="ni">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8h.01M11 12h1v4h1" />
+                </svg>
+              </span>
+              <span>
+                {t(
+                  'balance.topUpNote',
+                  'Средства зачисляются автоматически в течение пары минут. Комиссия зависит от способа оплаты и отображается перед подтверждением.',
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

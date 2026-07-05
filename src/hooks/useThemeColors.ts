@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { themeColorsApi } from '../api/themeColors';
 import { ThemeColors, DEFAULT_THEME_COLORS, SHADE_LEVELS, ColorPalette } from '../types/theme';
@@ -9,24 +8,47 @@ function rgbToString(r: number, g: number, b: number): string {
   return `${r}, ${g}, ${b}`;
 }
 
-// Generate color palette from base color (returns RGB strings)
-function generatePalette(baseHex: string): ColorPalette {
-  const { h, s } = hexToHsl(baseHex);
+// Lightness ramp for status palettes (success/warning/error). Shade 500 lands
+// at L50 — a saturated mid-tone, correct for semantic signal colors.
+const DEFAULT_LIGHTNESS: Record<number, number> = {
+  50: 97,
+  100: 94,
+  200: 86,
+  300: 76,
+  400: 64,
+  500: 50,
+  600: 42,
+  700: 34,
+  800: 26,
+  900: 18,
+  950: 10,
+};
 
-  // Lightness values for each shade level (from light to dark)
-  const lightnessMap: Record<number, number> = {
-    50: 97,
-    100: 94,
-    200: 86,
-    300: 76,
-    400: 64,
-    500: 50,
-    600: 42,
-    700: 34,
-    800: 26,
-    900: 18,
-    950: 10,
-  };
+// The Mitray brand accent is a soft, airy periwinkle (#9B9DFF ≈ HSL 239/100/80).
+// The default ramp forces shade 500 to L50, which collapses any hue into a harsh
+// mid-tone — the iris read as a hard blue. This lighter ramp keeps filled accent
+// surfaces (buttons use accent-500/600) soft; onColorFor() then auto-picks dark
+// ink text on them, reproducing the prototype's light-pill / dark-ink look.
+const ACCENT_LIGHTNESS: Record<number, number> = {
+  50: 98,
+  100: 96,
+  200: 92,
+  300: 86,
+  400: 80,
+  500: 72,
+  600: 63,
+  700: 53,
+  800: 42,
+  900: 31,
+  950: 20,
+};
+
+// Generate color palette from base color (returns RGB strings)
+function generatePalette(
+  baseHex: string,
+  lightnessMap: Record<number, number> = DEFAULT_LIGHTNESS,
+): ColorPalette {
+  const { h, s } = hexToHsl(baseHex);
 
   const palette: Partial<ColorPalette> = {};
 
@@ -117,7 +139,7 @@ export function applyThemeColors(themeColors: ThemeColors): void {
   const root = document.documentElement;
 
   // Generate palettes from status colors
-  const accentPalette = generatePalette(colors.accent);
+  const accentPalette = generatePalette(colors.accent, ACCENT_LIGHTNESS);
   const successPalette = generatePalette(colors.success);
   const warningPalette = generatePalette(colors.warning);
   const errorPalette = generatePalette(colors.error);
@@ -272,12 +294,11 @@ export function useThemeColors() {
     retry: 1,
   });
 
-  // Apply colors when loaded or changed
-  useEffect(() => {
-    const colorsToApply = colors || DEFAULT_THEME_COLORS;
-    applyThemeColors(colorsToApply);
-  }, [colors]);
-
+  // NOTE: applying colors is owned solely by ThemeColorsProvider (which honours
+  // VITE_FORCE_BRAND_THEME). This hook must only READ colors — re-applying here
+  // (it runs whenever a consumer like useTrafficZone mounts on navigation) would
+  // overwrite the forced brand palette with the backend's legacy colors, making
+  // the accent flip back to blue when switching tabs.
   const invalidateColors = () => {
     queryClient.invalidateQueries({ queryKey: ['theme-colors'] });
   };

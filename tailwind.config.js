@@ -121,6 +121,7 @@ export default {
         // so it never affects any other glyph). Global root fix for flags everywhere.
         sans: [
           'Twemoji Country Flags',
+          'Space Grotesk',
           'Manrope',
           'system-ui',
           '-apple-system',
@@ -129,7 +130,7 @@ export default {
           'Roboto',
           'sans-serif',
         ],
-        display: ['Twemoji Country Flags', 'Outfit', 'Manrope', 'system-ui', 'sans-serif'],
+        display: ['Twemoji Country Flags', 'Space Grotesk', 'Outfit', 'Manrope', 'system-ui', 'sans-serif'],
         mono: ['Twemoji Country Flags', 'IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {

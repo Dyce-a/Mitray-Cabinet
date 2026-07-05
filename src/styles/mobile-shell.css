@@ -1,0 +1,350 @@
+/* ============================================================================
+   Mitray VPN — mobile app shell (redesign). Ported from design-lab/mobile/*.html
+   (shared chassis: sticky header logo+burger / right-side drawer / floating
+   bottom tab-bar with liquid pill + shrink-on-scroll). Scoped to .m-header /
+   .m-scrim / .m-drawer / .m-tabbar. Theme-adaptive colors come from the app
+   design tokens (dark-* / accent-*, which the .light class remaps), so it
+   auto-inverts between dark and light — same token pattern as app-shell.css /
+   dashboard.css. Nav logic + the framer-motion active pill stay in the React
+   components (AppHeader.tsx / MobileBottomNav.tsx); this only restyles them.
+   ========================================================================== */
+
+.m-header,
+.m-scrim,
+.m-drawer,
+.m-tabbar {
+  --bg: rgb(var(--color-dark-950));
+  --bg2: #101019;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .m-header,
+.light .m-scrim,
+.light .m-drawer,
+.light .m-tabbar {
+  --bg2: #f5f6fc;
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* ── header: logo + burger only (everything secondary lives in the drawer) ── */
+.m-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.m-header .hbar {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+}
+.m-header .brand-logo {
+  width: 80px;
+  height: 42px;
+  overflow: visible;
+  flex: none;
+  display: block;
+}
+.m-header .brand-logo text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+.m-header .brand-logo .bl1 {
+  fill: var(--ink);
+}
+.m-header .brand-logo .bl2 {
+  fill: var(--accent);
+  letter-spacing: 5px;
+}
+.m-header .hsp {
+  flex: 1;
+}
+.m-header .burger {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* ── drawer ── */
+.m-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.m-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.m-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(330px, 86vw);
+  z-index: 41;
+  background: var(--bg2);
+  border-left: 1px solid var(--line2);
+  transform: translateX(100%);
+  transition: transform 0.34s cubic-bezier(0.4, 0, 0.1, 1);
+  display: flex;
+  flex-direction: column;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px
+    calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.m-drawer.open {
+  transform: none;
+}
+.m-drawer .dr-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.m-drawer .dr-util {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.m-drawer .dr-util.lang {
+  width: auto;
+  padding: 0 11px;
+  gap: 5px;
+  font:
+    600 13px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  display: flex;
+  align-items: center;
+}
+.m-drawer .dr-close {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.m-drawer .dr-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.m-drawer .dr-user .av {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font:
+    700 18px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  display: grid;
+  place-items: center;
+}
+.m-drawer .dr-user b {
+  font-size: 15px;
+  font-weight: 700;
+}
+.m-drawer .dr-user p {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+.m-drawer .dr-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.m-drawer .dr-link {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 14px;
+  border-radius: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  font:
+    600 15px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+}
+.m-drawer .dr-link svg {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  color: var(--muted);
+}
+.m-drawer .dr-link:hover {
+  background: var(--panel);
+}
+.m-drawer .dr-link.on {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.m-drawer .dr-link.on svg {
+  color: var(--accent);
+}
+.m-drawer .dr-link.admin {
+  color: var(--warn);
+}
+.m-drawer .dr-link.admin svg {
+  color: var(--warn);
+}
+.m-drawer .dr-link.danger {
+  color: var(--danger);
+}
+.m-drawer .dr-link.danger svg {
+  color: var(--danger);
+}
+.m-drawer .dr-sec {
+  margin: 14px 0 6px;
+  padding: 0 14px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.m-drawer .dr-div {
+  height: 1px;
+  background: var(--line);
+  margin: 10px 4px;
+}
+
+/* ── bottom tab bar — floating rounded pill bar; shrinks on scroll-down ── */
+.m-tabbar {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  gap: 2px;
+  padding: 8px 6px;
+  background: color-mix(in srgb, var(--bg2) 90%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--line2);
+  border-radius: 22px;
+  box-shadow: 0 16px 44px -18px rgba(0, 0, 0, 0.65);
+  transform-origin: bottom center;
+  transition:
+    transform 0.32s cubic-bezier(0.4, 0, 0.1, 1),
+    opacity 0.2s;
+}
+.m-tabbar.shrink {
+  transform: scale(0.86);
+}
+.m-tabbar.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+.m-tabbar .tab {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 1px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.25s;
+}
+.m-tabbar .tab svg {
+  width: 23px;
+  height: 23px;
+  flex: none;
+}
+.m-tabbar .tab.on {
+  color: var(--accent);
+}
+.m-tabbar .tab .tl {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+/* single pill positioned by offsetLeft/offsetWidth (layout coords, immune to the
+   bar's shrink scale) — placed in JS, slides via this transition on active change */
+.m-tabbar .tab-pill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  z-index: 0;
+  width: 0;
+  opacity: 0;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  transition:
+    transform 0.4s cubic-bezier(0.5, 1.2, 0.4, 1),
+    width 0.4s cubic-bezier(0.5, 1.2, 0.4, 1),
+    opacity 0.3s;
+}

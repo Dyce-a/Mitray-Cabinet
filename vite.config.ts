@@ -36,6 +36,23 @@ export default defineConfig({
       },
     },
   },
+  // Same proxy for `vite preview` (production build served locally) so the
+  // prod bundle also reaches the backend through the SSH tunnel.
+  preview: {
+    port: 4173,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/health': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,

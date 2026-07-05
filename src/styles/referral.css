@@ -1,0 +1,657 @@
+/* ============================================================================
+   Mitray VPN — Referral screen (redesign). Ported from design-lab/referrals.html.
+   Scoped to .mitray-ref. Theme-adaptive via app design tokens (dark/accent/
+   success/warning/error), which .light remaps. The partner-approved / withdrawal
+   sections (no prototype) reuse the same card system for a consistent look.
+   ========================================================================== */
+
+.mitray-ref {
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-ref {
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* page head */
+.mitray-ref .phead {
+  padding: 2px 0 4px;
+}
+.mitray-ref .phead h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+/* reveal */
+.mitray-ref .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-ref.in .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-ref.in .d1 {
+  transition-delay: 0.04s;
+}
+.mitray-ref.in .d2 {
+  transition-delay: 0.1s;
+}
+.mitray-ref.in .d3 {
+  transition-delay: 0.16s;
+}
+.mitray-ref.in .d4 {
+  transition-delay: 0.22s;
+}
+.mitray-ref.in .d5 {
+  transition-delay: 0.28s;
+}
+
+.mitray-ref .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+}
+.mitray-ref .card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.mitray-ref .card-h .t {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mitray-ref .card-h .sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* top stats */
+.mitray-ref .rstats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.mitray-ref .rstat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 22px;
+}
+.mitray-ref .rstat .ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.mitray-ref .rstat .v {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-ref .rstat .v.acc {
+  color: var(--accent);
+}
+.mitray-ref .rstat .v.green {
+  color: var(--green);
+}
+.mitray-ref .rstat .sub {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* layout */
+.mitray-ref .ref-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.mitray-ref .col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* link rows */
+.mitray-ref .lrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.mitray-ref .lrow:last-of-type {
+  margin-bottom: 14px;
+}
+.mitray-ref .lrow .ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.mitray-ref .lrow .u {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-ref .lrow .u b {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.mitray-ref .lrow .u .url {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, monospace;
+}
+.mitray-ref .sbtn {
+  height: 36px;
+  padding: 0 12px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font:
+    600 12.5px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition: 0.2s;
+}
+.mitray-ref .sbtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mitray-ref .sbtn.done {
+  color: var(--green);
+  border-color: var(--green);
+}
+.mitray-ref .note {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.mitray-ref .note b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* conditions */
+.mitray-ref .cond-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.mitray-ref .cond {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 15px;
+}
+.mitray-ref .cond .k {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.mitray-ref .cond .v {
+  margin-top: 7px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mitray-ref .cond .v.green {
+  color: var(--green);
+}
+.mitray-ref .cond .v.acc {
+  color: var(--accent);
+}
+
+/* referral / history rows */
+.mitray-ref .rr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mitray-ref .rr:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.mitray-ref .rr .ava {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.mitray-ref .rr .nm {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-ref .rr .nm b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-ref .rr .nm p {
+  color: var(--faint);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+.mitray-ref .st {
+  flex: none;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.mitray-ref .st.green {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.mitray-ref .st.danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.mitray-ref .st.info {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.mitray-ref .amt {
+  flex: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-ref .amt.zero {
+  color: var(--muted);
+}
+
+/* empty + loader */
+.mitray-ref .rr-empty {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.mitray-ref .ref-loader {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+.mitray-ref .ref-spin {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid var(--line2);
+  border-top-color: var(--accent);
+  animation: mr-spin 0.8s linear infinite;
+}
+@keyframes mr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* partner CTA + status cards */
+.mitray-ref .partner {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 22%, var(--panel)),
+    var(--panel)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: 0 12px 40px -28px var(--accent);
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.55s ease;
+}
+.mitray-ref .partner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 54px -18px var(--accent);
+}
+/* win over `.in .reveal` so the hover glow eases in instead of snapping */
+.mitray-ref.in .partner.reveal {
+  transition:
+    opacity 0.5s ease,
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.55s ease;
+}
+.mitray-ref .partner .ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+}
+.mitray-ref .partner.warn .ic {
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--warn),
+    color-mix(in srgb, var(--warn) 60%, transparent)
+  );
+}
+.mitray-ref .partner.danger .ic {
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--danger),
+    color-mix(in srgb, var(--danger) 60%, transparent)
+  );
+}
+.mitray-ref .partner b {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mitray-ref .partner p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.mitray-ref .partner button {
+  margin-top: 16px;
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 10px 26px -10px var(--accent);
+  transition: transform 0.25s;
+}
+.mitray-ref .partner button:hover {
+  transform: translateY(-2px);
+}
+
+/* secondary action button (withdrawal request, etc.) */
+.mitray-ref .rbtn {
+  height: 44px;
+  padding: 0 22px;
+  border: 1px solid var(--line2);
+  border-radius: 13px;
+  cursor: pointer;
+  background: var(--panel2);
+  color: var(--ink);
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
+}
+.mitray-ref .rbtn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.mitray-ref .rbtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mitray-ref .rbtn.primary {
+  border: none;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 10px 26px -10px var(--accent);
+}
+
+.mitray-ref .link-cancel {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font:
+    600 13px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+/* responsive: single column, reorder like design-lab/mobile/referrals.html
+   (links → terms → partner → referrals list → earnings) */
+@media (max-width: 980px) {
+  .mitray-ref .ref-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .mitray-ref .col {
+    display: contents;
+  }
+  /* cards are the flex-column items now (col is display:contents) — pin them to
+     the container width so inner rows (link url, buttons) shrink instead of
+     forcing the card wider than the viewport */
+  .mitray-ref .card {
+    width: 100%;
+    min-width: 0;
+  }
+  .mitray-ref .ref-links {
+    order: 1;
+  }
+  .mitray-ref .ref-terms {
+    order: 2;
+  }
+  .mitray-ref .partner {
+    order: 3;
+  }
+  .mitray-ref .ref-list {
+    order: 4;
+  }
+  .mitray-ref .ref-earn {
+    order: 5;
+  }
+}
+@media (max-width: 680px) {
+  .mitray-ref .phead h1 {
+    font-size: 24px;
+  }
+}
+
+/* phone density — tighten to design-lab/mobile/referrals.html (3-up stats,
+   2-up conditions, icon-only copy/share buttons) */
+@media (max-width: 560px) {
+  .mitray-ref .phead h1 {
+    font-size: 23px;
+  }
+  .mitray-ref .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .mitray-ref .card-h {
+    margin-bottom: 14px;
+  }
+  .mitray-ref .card-h .t {
+    font-size: 15px;
+  }
+  .mitray-ref .rstats {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .mitray-ref .rstat {
+    padding: 13px 11px;
+    border-radius: 15px;
+  }
+  .mitray-ref .rstat .ic {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    margin-bottom: 10px;
+  }
+  .mitray-ref .rstat .v {
+    font-size: 20px;
+  }
+  .mitray-ref .rstat .sub {
+    margin-top: 6px;
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+  .mitray-ref .lrow {
+    padding: 13px 14px;
+    border-radius: 13px;
+    gap: 11px;
+    margin-bottom: 10px;
+  }
+  .mitray-ref .lrow .ic {
+    width: 36px;
+    height: 36px;
+  }
+  .mitray-ref .lrow .u b {
+    font-size: 13px;
+  }
+  .mitray-ref .lrow .u .url {
+    font-size: 11.5px;
+  }
+  /* icon-only buttons like the prototype (labels would crowd the row at 375px) */
+  .mitray-ref .sbtn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+  .mitray-ref .sbtn-label {
+    display: none;
+  }
+  .mitray-ref .cond {
+    padding: 13px 14px;
+    border-radius: 13px;
+  }
+  .mitray-ref .cond .k {
+    font-size: 10.5px;
+  }
+  .mitray-ref .cond .v {
+    font-size: 18px;
+  }
+  .mitray-ref .rr {
+    padding: 11px 0;
+    gap: 11px;
+  }
+  .mitray-ref .rr .ava {
+    width: 36px;
+    height: 36px;
+  }
+  .mitray-ref .rr .nm b {
+    font-size: 13.5px;
+  }
+  .mitray-ref .rr .nm p {
+    font-size: 11px;
+  }
+  .mitray-ref .st {
+    font-size: 11px;
+  }
+  .mitray-ref .amt {
+    font-size: 13.5px;
+  }
+  .mitray-ref .note {
+    font-size: 12px;
+  }
+  .mitray-ref .partner b {
+    font-size: 16px;
+  }
+  .mitray-ref .partner p {
+    font-size: 12.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-ref * {
+    animation: none !important;
+    transition-duration: 0.001s !important;
+  }
+}

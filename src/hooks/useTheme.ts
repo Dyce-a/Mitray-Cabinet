@@ -48,6 +48,10 @@ function getCachedEnabledThemes(): EnabledThemes {
 const ENABLED_THEMES_CHANGED_EVENT = 'enabledThemesChanged';
 const THEME_CHANGED_EVENT = 'themeChanged';
 
+// Module-scoped so the many useTheme() instances share one debounce timer for
+// the transient cross-fade class (see globals.css html.theme-anim).
+let themeAnimTimer: ReturnType<typeof setTimeout> | undefined;
+
 // Update cache (called from admin settings)
 export function updateEnabledThemesCache(themes: EnabledThemes) {
   localStorage.setItem(ENABLED_THEMES_KEY, JSON.stringify(themes));
@@ -163,6 +167,17 @@ export function useTheme() {
         setThemeState(newTheme);
         return; // Will re-run with correct theme
       }
+    }
+
+    // Smooth theme cross-fade: when the class actually flips (not on initial
+    // mount / duplicate hook instances), transiently enable color transitions
+    // app-wide (html.theme-anim in globals.css), then drop the class.
+    const flipping =
+      theme === 'light' ? root.classList.contains('dark') : root.classList.contains('light');
+    if (flipping) {
+      root.classList.add('theme-anim');
+      clearTimeout(themeAnimTimer);
+      themeAnimTimer = setTimeout(() => root.classList.remove('theme-anim'), 360);
     }
 
     if (theme === 'light') {

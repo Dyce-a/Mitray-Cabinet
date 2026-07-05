@@ -1,0 +1,715 @@
+/* ============================================================================
+   Mitray VPN — Balance screen (redesign). Ported from design-lab/balance.html.
+   Scoped to .mitray-balance. Theme-adaptive via the app design tokens
+   (dark-* / accent-* / success-* / warning-* / error-*), which .light remaps.
+   Top-up still navigates to the existing /balance/top-up/:method flow (the modal
+   from the prototype wraps live payment logic — deferred).
+   ========================================================================== */
+
+.mitray-balance {
+  --bg: rgb(var(--color-dark-950));
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-balance {
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* page head */
+.mitray-balance .phead {
+  padding: 2px 0 4px;
+}
+.mitray-balance .phead h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+/* reveal */
+.mitray-balance .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-balance.in .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-balance.in .d1 {
+  transition-delay: 0.05s;
+}
+.mitray-balance.in .d2 {
+  transition-delay: 0.12s;
+}
+.mitray-balance.in .d3 {
+  transition-delay: 0.19s;
+}
+.mitray-balance.in .d4 {
+  transition-delay: 0.26s;
+}
+.mitray-balance.in .d5 {
+  transition-delay: 0.33s;
+}
+
+/* layout */
+.mitray-balance .bal-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.mitray-balance .col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.mitray-balance .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+}
+.mitray-balance .card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.mitray-balance .card-h .t {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mitray-balance .card-h .sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+.mitray-balance .k-lbl {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* balance hero */
+.mitray-balance .hero-bal {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 20%, var(--panel)),
+    var(--panel)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: 0 18px 50px -34px var(--accent);
+}
+.mitray-balance .hero-bal::after {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -70px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent2) 26%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+.mitray-balance .hero-bal .amount {
+  position: relative;
+  margin-top: 12px;
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-balance .hero-bal .amount span {
+  font-size: 26px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-left: 6px;
+}
+.mitray-balance .hero-bal .hint {
+  position: relative;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.mitray-balance .hero-bal .hint b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* top-up methods */
+.mitray-balance .method {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+.mitray-balance .method + .method {
+  margin-top: 12px;
+}
+.mitray-balance .method:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 16px 40px -26px var(--accent);
+}
+.mitray-balance .method.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.mitray-balance .method .mi {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+}
+.mitray-balance .method .mt {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-balance .method .mt b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.mitray-balance .method .mt p {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+.mitray-balance .method .mt p span {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-balance .method .chev {
+  flex: none;
+  color: var(--faint);
+  transition: 0.25s;
+}
+.mitray-balance .method:hover .chev {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+
+/* promo code */
+.mitray-balance .promo-row {
+  display: flex;
+  gap: 10px;
+}
+.mitray-balance .promo-row input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 13px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font:
+    500 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.mitray-balance .promo-row input::placeholder {
+  color: var(--faint);
+}
+.mitray-balance .promo-row input:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.mitray-balance .promo-btn {
+  flex: none;
+  height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 13px;
+  font:
+    700 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--pill-ink);
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 10px 26px -12px var(--accent);
+  transition:
+    transform 0.25s,
+    box-shadow 0.3s,
+    opacity 0.2s;
+}
+.mitray-balance .promo-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px -12px var(--accent);
+}
+.mitray-balance .promo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mitray-balance .promo-msg {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--green);
+}
+.mitray-balance .promo-msg.err {
+  color: var(--danger);
+}
+.mitray-balance .promo-picker {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.mitray-balance .promo-picker .pk-t {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.mitray-balance .promo-picker button.pk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font:
+    600 13px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.mitray-balance .promo-picker button.pk:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.mitray-balance .promo-picker button.pk .pk-days {
+  color: var(--muted);
+  font-weight: 500;
+}
+.mitray-balance .promo-picker .pk-cancel {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font:
+    500 12px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+/* history */
+.mitray-balance .collapse {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mitray-balance .collapse:hover {
+  color: var(--ink);
+  border-color: var(--line2);
+}
+.mitray-balance .collapse svg {
+  transition: transform 0.3s;
+}
+.mitray-balance .history.collapsed .collapse svg {
+  transform: rotate(180deg);
+}
+.mitray-balance .tx-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 560px;
+  overflow: auto;
+  margin: 0 -6px;
+  padding: 0 6px;
+  transition: max-height 0.4s ease;
+}
+.mitray-balance .history.collapsed .tx-list {
+  max-height: 0;
+  overflow: hidden;
+}
+.mitray-balance .tx-list::-webkit-scrollbar {
+  width: 7px;
+}
+.mitray-balance .tx-list::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 10px;
+}
+.mitray-balance .tx-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mitray-balance .tx {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.mitray-balance .tx:last-child {
+  border-bottom: none;
+}
+.mitray-balance .tx-ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+}
+.mitray-balance .tx-ic.dep {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 13%, transparent);
+}
+.mitray-balance .tx-ic.com {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.mitray-balance .tx-ic.deb {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.mitray-balance .tx-ic.bon {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.mitray-balance .tx-main {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-balance .tx-main b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-balance .tx-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.mitray-balance .tx-meta .date {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-balance .tx-tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.mitray-balance .tx-tag.dep {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 13%, transparent);
+}
+.mitray-balance .tx-tag.com {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.mitray-balance .tx-tag.deb {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.mitray-balance .tx-tag.bon {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.mitray-balance .tx-amt {
+  flex: none;
+  font:
+    700 15px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--green);
+}
+.mitray-balance .tx-amt.neg {
+  color: var(--ink);
+}
+
+/* empty + pagination + loader */
+.mitray-balance .tx-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.mitray-balance .tx-loader {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+.mitray-balance .tx-spin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line2);
+  border-top-color: var(--accent);
+  animation: mb-spin 0.8s linear infinite;
+}
+@keyframes mb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.mitray-balance .pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.mitray-balance .pager .pg-info {
+  flex: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-balance .pager button {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font:
+    600 13px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
+}
+.mitray-balance .pager button:hover:not(:disabled) {
+  border-color: var(--line2);
+}
+.mitray-balance .pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* note + saved cards */
+.mitray-balance .note {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.mitray-balance .note .ni {
+  flex: none;
+  color: var(--accent);
+  margin-top: 1px;
+}
+.mitray-balance .saved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+}
+.mitray-balance .saved .sv-l {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 14px;
+}
+.mitray-balance .saved .sv-l svg {
+  color: var(--accent);
+}
+.mitray-balance .saved .chev {
+  color: var(--faint);
+  transition: 0.25s;
+}
+.mitray-balance .saved:hover .chev {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+
+/* responsive: single column, reorder like the prototype */
+@media (max-width: 900px) {
+  .mitray-balance .bal-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .mitray-balance .col {
+    display: contents;
+  }
+  /* cards are the flex-column items now (col is display:contents) — pin them to
+     the container width so inner flex rows (promo input, tx) shrink instead of
+     forcing the card wider than the viewport */
+  .mitray-balance .card {
+    width: 100%;
+    min-width: 0;
+  }
+  .mitray-balance .hero-bal {
+    order: 1;
+  }
+  .mitray-balance .topup {
+    order: 2;
+  }
+  .mitray-balance .promo-card {
+    order: 3;
+  }
+  .mitray-balance .history {
+    order: 4;
+  }
+  .mitray-balance .saved-card {
+    order: 5;
+  }
+  .mitray-balance .note-card {
+    order: 6;
+  }
+}
+
+/* phone density — tighten to design-lab/mobile/balance.html (layout already
+   stacks at 900px; this only scales down like the subscription mobile pass) */
+@media (max-width: 560px) {
+  .mitray-balance .phead h1 {
+    font-size: 23px;
+  }
+  .mitray-balance .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .mitray-balance .card-h {
+    margin-bottom: 14px;
+  }
+  .mitray-balance .card-h .t {
+    font-size: 15px;
+  }
+  .mitray-balance .hero-bal .amount {
+    font-size: 44px;
+    letter-spacing: -1.2px;
+  }
+  .mitray-balance .hero-bal .amount span {
+    font-size: 22px;
+  }
+  .mitray-balance .hero-bal .hint {
+    font-size: 12.5px;
+    margin-top: 12px;
+  }
+  .mitray-balance .method {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .mitray-balance .method + .method {
+    margin-top: 10px;
+  }
+  .mitray-balance .method .mi {
+    width: 44px;
+    height: 44px;
+  }
+  .mitray-balance .method .mt b {
+    font-size: 14.5px;
+  }
+  .mitray-balance .promo-btn {
+    padding: 0 16px;
+  }
+  .mitray-balance .tx {
+    padding: 12px 0;
+    gap: 11px;
+  }
+  .mitray-balance .tx-ic {
+    width: 36px;
+    height: 36px;
+  }
+  .mitray-balance .tx-main b {
+    font-size: 13px;
+  }
+  .mitray-balance .tx-amt {
+    font-size: 14px;
+  }
+  .mitray-balance .note {
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-balance * {
+    animation: none !important;
+    transition-duration: 0.001s !important;
+  }
+}

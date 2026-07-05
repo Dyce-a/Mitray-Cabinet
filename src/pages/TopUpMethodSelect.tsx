@@ -8,6 +8,7 @@ import { useCurrency } from '../hooks/useCurrency';
 import { Card } from '@/components/data-display/Card';
 import { staggerContainer, staggerItem } from '@/components/motion/transitions';
 import PaymentMethodIcon from '@/components/PaymentMethodIcon';
+import { BackIcon } from '@/components/icons';
 
 export default function TopUpMethodSelect() {
   const { t } = useTranslation();
@@ -37,6 +38,16 @@ export default function TopUpMethodSelect() {
       initial="initial"
       animate="animate"
     >
+      <motion.button
+        variants={staggerItem}
+        type="button"
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 rounded-xl py-1 pr-2 text-sm font-medium text-dark-400 transition-colors duration-200 hover:text-dark-100"
+      >
+        <BackIcon className="h-4 w-4" />
+        <span>{t('common.back')}</span>
+      </motion.button>
+
       <motion.div variants={staggerItem}>
         <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
           {t('balance.selectPaymentMethod')}

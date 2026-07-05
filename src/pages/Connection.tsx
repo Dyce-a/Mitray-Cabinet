@@ -13,6 +13,7 @@ import { isHappCryptolinkMode, resolveConnectionUrlForUi } from '../utils/connec
 import { useAuthStore } from '../store/auth';
 import type { AppConfig, RemnawavePlatformData } from '../types';
 import InstallationGuide from '../components/connection/InstallationGuide';
+import '../styles/connection.css';
 
 export default function Connection() {
   const { t, i18n } = useTranslation();
@@ -153,44 +154,46 @@ export default function Connection() {
 
   if (isLoading || isConnectionLinkLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-accent-500/30 border-t-accent-500" />
+      <div className="mitray-conn state">
+        <div className="conn-loader">
+          <span className="conn-spin" />
+        </div>
       </div>
     );
   }
 
   if (error || !appConfig || !hasApps) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-dark-800">
-          <svg
-            className="h-8 w-8 text-dark-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"
-            />
-          </svg>
+      <div className="mitray-conn state">
+        <div className="conn-state">
+          <div className="ic">
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"
+              />
+            </svg>
+          </div>
+          <h3>{t('subscription.connection.notConfigured')}</h3>
+          <p>
+            {isAdmin
+              ? t('subscription.connection.notConfiguredAdmin')
+              : t('subscription.connection.notConfiguredUser')}
+          </p>
+          {isAdmin && (
+            <Link to="/admin/apps" className="conn-btn">
+              <SettingsIcon className="h-4 w-4" />
+              {t('subscription.connection.goToApps')}
+            </Link>
+          )}
         </div>
-        <h3 className="mb-2 text-xl font-bold text-dark-100">
-          {t('subscription.connection.notConfigured')}
-        </h3>
-        <p className="mb-6 max-w-sm text-dark-400">
-          {isAdmin
-            ? t('subscription.connection.notConfiguredAdmin')
-            : t('subscription.connection.notConfiguredUser')}
-        </p>
-        {isAdmin && (
-          <Link to="/admin/apps" className="btn-primary inline-flex items-center gap-2 px-6 py-2.5">
-            <SettingsIcon className="h-4 w-4" />
-            {t('subscription.connection.goToApps')}
-          </Link>
-        )}
       </div>
     );
   }
@@ -198,14 +201,14 @@ export default function Connection() {
   // No subscription
   if (!appConfig.hasSubscription) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <h3 className="mb-2 text-xl font-bold text-dark-100">
-          {t('subscription.connection.title')}
-        </h3>
-        <p className="mb-4 text-dark-400">{t('subscription.connection.noSubscription')}</p>
-        <button onClick={handleGoBack} className="btn-primary px-6 py-2">
-          {t('common.close')}
-        </button>
+      <div className="mitray-conn state">
+        <div className="conn-state">
+          <h3>{t('subscription.connection.title')}</h3>
+          <p>{t('subscription.connection.noSubscription')}</p>
+          <button onClick={handleGoBack} className="conn-btn">
+            {t('common.close')}
+          </button>
+        </div>
       </div>
     );
   }

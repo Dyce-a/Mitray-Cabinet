@@ -1,0 +1,594 @@
+/* ============================================================================
+   Mitray VPN — Info screen (redesign). Ported from design-lab/info.html.
+   Scoped to .mitray-info. Theme-adaptive via app design tokens, .light remaps.
+   Tabs (faq/rules/privacy/offer/loyalty + custom pages) and content are all
+   driven by the existing queries — only the presentation is restyled here.
+   ========================================================================== */
+
+.mitray-info {
+  /* Text/accent/bg stay on generated tokens — they already match the prototype
+     (Δ≤4) and keep reacting to admin accent changes. Brand semantics
+     (faint/green/warn/danger) are pinned to the exact prototype hex: deriving
+     them from the contrast-tuned ramp shifts green pastel & lifts faint. */
+  --bg2: #101019;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-info {
+  --bg2: #f5f6fc;
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+
+/* page head */
+.mitray-info .phead {
+  padding: 2px 0 4px;
+}
+.mitray-info .phead h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+.mitray-info .phead .hi {
+  color: var(--accent);
+  display: inline-flex;
+}
+
+/* reveal */
+.mitray-info .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.mitray-info.in .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mitray-info.in .d1 {
+  transition-delay: 0.05s;
+}
+.mitray-info.in .d2 {
+  transition-delay: 0.12s;
+}
+
+/* tabs */
+.mitray-info .tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.mitray-info .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 13px;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font:
+    600 14px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.mitray-info .tab svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.mitray-info .tab .emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+.mitray-info .tab .lbl {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-info .tab:hover {
+  color: var(--ink);
+  border-color: var(--line2);
+}
+.mitray-info .tab.on {
+  color: var(--pill-ink);
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+  box-shadow: 0 10px 24px -12px var(--accent);
+}
+
+/* faq accordion */
+.mitray-info .faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mitray-info .faq {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.mitray-info .faq:hover {
+  border-color: var(--line2);
+}
+.mitray-info .faq.open {
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.mitray-info .faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 20px 22px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  font:
+    600 15.5px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--ink);
+}
+.mitray-info .faq-q .chev {
+  flex: none;
+  color: var(--faint);
+  display: inline-flex;
+  transition: color 0.2s;
+}
+.mitray-info .faq.open .faq-q .chev {
+  color: var(--accent);
+}
+.mitray-info .faq-a {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.32s ease;
+}
+.mitray-info .faq-a .inner {
+  padding: 0 22px 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* document card (rules / privacy / offer / custom html) */
+.mitray-info .doc {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 26px;
+  color: var(--ink);
+}
+.mitray-info .doc .doc-body {
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.mitray-info .doc .doc-body :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--ink);
+  font-weight: 700;
+  margin: 1.2em 0 0.5em;
+  line-height: 1.3;
+}
+.mitray-info .doc .doc-body :where(h1):first-child,
+.mitray-info .doc .doc-body :where(h2):first-child,
+.mitray-info .doc .doc-body :where(h3):first-child,
+.mitray-info .doc .doc-body :where(p):first-child {
+  margin-top: 0;
+}
+.mitray-info .doc .doc-body p {
+  margin: 0.7em 0;
+}
+.mitray-info .doc .doc-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.mitray-info .doc .doc-body a:hover {
+  text-decoration: underline;
+}
+.mitray-info .doc .doc-body :where(ul, ol) {
+  margin: 0.7em 0;
+  padding-left: 1.4em;
+}
+.mitray-info .doc .doc-body li {
+  margin: 0.3em 0;
+}
+.mitray-info .doc .doc-body :where(strong, b) {
+  color: var(--ink);
+  font-weight: 700;
+}
+.mitray-info .doc .doc-body :where(code, pre) {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.1em 0.4em;
+  font-size: 0.92em;
+}
+.mitray-info .doc .doc-body img,
+.mitray-info .doc .doc-body video,
+.mitray-info .doc .doc-body iframe {
+  max-width: 100%;
+  border-radius: 12px;
+}
+.mitray-info .doc .doc-body blockquote {
+  margin: 0.9em 0;
+  padding: 0.4em 1em;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--muted);
+}
+.mitray-info .doc .doc-meta {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 13px;
+}
+
+/* loading / empty states */
+.mitray-info .loader {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+.mitray-info .spin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line2);
+  border-top-color: var(--accent);
+  animation: mi-spin 0.8s linear infinite;
+}
+@keyframes mi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.mitray-info .empty {
+  padding: 34px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  background: var(--panel);
+  border: 1px dashed var(--line2);
+  border-radius: 18px;
+}
+
+/* loyalty tiers */
+.mitray-info .loy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.mitray-info .loy-prog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+}
+.mitray-info .loy-prog h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.mitray-info .loy-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.mitray-info .loy-stat {
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+.mitray-info .loy-stat .k {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.mitray-info .loy-stat .v {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-info .loy-stat .v.accent {
+  color: var(--accent);
+}
+.mitray-info .loy-next {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.mitray-info .loy-bar {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+.mitray-info .loy-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, var(--accent2))
+  );
+  transition: width 0.5s ease;
+}
+.mitray-info .loy-pct {
+  margin-top: 6px;
+  text-align: right;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-info .loy-done {
+  padding: 6px 0;
+  text-align: center;
+  color: var(--green);
+  font-weight: 600;
+  font-size: 14px;
+}
+.mitray-info .loy-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mitray-info .loy-tier {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.mitray-info .loy-tier.cur {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.mitray-info .loy-tier.done {
+  background: color-mix(in srgb, var(--green) 5%, transparent);
+}
+.mitray-info .loy-tier.lock {
+  opacity: 0.68;
+}
+.mitray-info .loy-tier-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mitray-info .loy-tier-l {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.mitray-info .loy-ic {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--faint);
+}
+.mitray-info .loy-tier.cur .loy-ic {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border-color: transparent;
+}
+.mitray-info .loy-tier.done .loy-ic {
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
+  border-color: transparent;
+}
+.mitray-info .loy-tier-nm {
+  min-width: 0;
+}
+.mitray-info .loy-tier-nm b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-info .loy-tier-nm p {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-info .loy-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.mitray-info .loy-badge.cur {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.mitray-info .loy-badge.done {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+}
+.mitray-info .loy-badge.lock {
+  color: var(--faint);
+  background: var(--panel2);
+}
+.mitray-info .loy-disc {
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 13px;
+}
+.mitray-info .loy-disc .dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 9px;
+}
+.mitray-info .loy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mitray-info .loy-chip {
+  border-radius: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  padding: 5px 10px;
+  color: var(--ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-info .loy-nodisc {
+  color: var(--faint);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+@media (max-width: 760px) {
+  .mitray-info .phead h1 {
+    font-size: 24px;
+  }
+  /* horizontal scroll strip that bleeds to the screen edges (main content is
+     px-4 = 16px on mobile), like design-lab/mobile/info.html */
+  .mitray-info .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 2px 16px;
+  }
+  .mitray-info .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mitray-info .tab {
+    flex: none;
+  }
+  .mitray-info .loy-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* phone density — tighten to design-lab/mobile/info.html */
+@media (max-width: 560px) {
+  .mitray-info .phead h1 {
+    font-size: 23px;
+  }
+  .mitray-info .tabs {
+    gap: 8px;
+  }
+  .mitray-info .tab {
+    min-height: 40px;
+    padding: 0 15px;
+    border-radius: 12px;
+    font-size: 13.5px;
+  }
+  .mitray-info .faq-list {
+    gap: 10px;
+  }
+  .mitray-info .faq {
+    border-radius: 15px;
+  }
+  .mitray-info .faq-q {
+    padding: 16px;
+    font-size: 14px;
+  }
+  .mitray-info .faq-a .inner {
+    padding: 0 16px 16px;
+    font-size: 13px;
+  }
+  .mitray-info .doc {
+    padding: 18px;
+    border-radius: 18px;
+  }
+  .mitray-info .doc .doc-body {
+    font-size: 13.5px;
+  }
+  .mitray-info .doc .doc-meta {
+    margin-top: 16px;
+  }
+  .mitray-info .empty {
+    padding: 24px 18px;
+  }
+  .mitray-info .loy {
+    gap: 14px;
+  }
+  .mitray-info .loy-prog,
+  .mitray-info .loy-tier {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .mitray-info .loy-tier-nm b {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitray-info * {
+    animation: none !important;
+    transition-duration: 0.001s !important;
+  }
+}

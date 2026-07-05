@@ -66,24 +66,35 @@ export function TrafficTopupSheet({
 
   if (!open) {
     return (
-      <button
-        onClick={onOpen}
-        className={`w-full rounded-xl border p-4 text-left transition-colors ${isDark ? 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600' : 'border-champagne-300/60 bg-champagne-200/40 hover:border-champagne-400'}`}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-dark-100">
-              {t('subscription.additionalOptions.buyTraffic')}
-            </div>
-            <div className="mt-1 text-sm text-dark-400">
-              {t('subscription.additionalOptions.currentTrafficLimit', {
-                limit: subscription.traffic_limit_gb,
-                used: subscription.traffic_used_gb.toFixed(1),
-              })}
-            </div>
-          </div>
-          <ChevronRightIcon className="text-dark-400" />
+      <button onClick={onOpen} className="opt">
+        <span className="ic">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9" />
+            <path d="M3 4v5h5" />
+          </svg>
+        </span>
+        <div className="tt">
+          <b>{t('subscription.additionalOptions.buyTraffic')}</b>
+          <p>
+            {t('subscription.additionalOptions.currentTrafficLimit', {
+              limit: subscription.traffic_limit_gb,
+              used: subscription.traffic_used_gb.toFixed(1),
+            })}
+          </p>
         </div>
+        <span className="chev">
+          <ChevronRightIcon />
+        </span>
       </button>
     );
   }

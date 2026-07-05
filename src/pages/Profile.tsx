@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { usePlatform } from '@/platform';
 import { copyToClipboard } from '@/utils/clipboard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/auth';
 import { displayName } from '../utils/displayName';
 import { authApi } from '../api/auth';
@@ -17,11 +16,36 @@ import {
 import { referralApi } from '../api/referral';
 import { brandingApi, type EmailAuthEnabled } from '../api/branding';
 import { UI } from '../config/constants';
-import { Card } from '@/components/data-display/Card';
-import { Button } from '@/components/primitives/Button';
-import { Switch } from '@/components/primitives/Switch';
-import { staggerContainer, staggerItem } from '@/components/motion/transitions';
-import { CopyIcon, CheckIcon, ShareIcon, ArrowRightIcon, PencilIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import '../styles/profile.css';
+
+// Prototype-style pill toggle (replaces the Radix Switch).
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      className={cn('switch', checked && 'on')}
+      onClick={() => onChange(!checked)}
+    />
+  );
+}
+
+const IcCheck = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12l5 5 9-11" />
+  </svg>
+);
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -30,9 +54,26 @@ export default function Profile() {
   const setUser = useAuthStore((state) => state.setUser);
   const queryClient = useQueryClient();
 
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    // Double rAF: with a warm query cache the page renders in its first frame
+    // and a single rAF fires BEFORE that frame paints — .in would land in the
+    // initial paint and the stagger would have nothing to animate from.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setRevealed(true));
+    });
+    const fallback = setTimeout(() => setRevealed(true), 90);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(fallback);
+    };
+  }, []);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<'bot' | 'cabinet' | null>(null);
 
   // Inline email change flow
   const [changeEmailStep, setChangeEmailStep] = useState<'email' | 'code' | 'success' | null>(null);
@@ -70,21 +111,21 @@ export default function Profile() {
   const isEmailAuthEnabled = emailAuthConfig?.enabled ?? true;
   const isEmailVerificationEnabled = emailAuthConfig?.verification_enabled ?? true;
 
-  // Build referral link for cabinet
+  // Referral links: bot deep-link + cabinet registration link
   const referralLink = referralInfo?.referral_code
     ? `${window.location.origin}/login?ref=${referralInfo.referral_code}`
     : '';
+  const botReferralLink = referralInfo?.bot_referral_link || '';
 
-  const copyReferralLink = () => {
-    if (referralLink) {
-      void copyToClipboard(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const copyLink = (link: string, type: 'bot' | 'cabinet') => {
+    if (!link) return;
+    void copyToClipboard(link);
+    setCopiedLink(type);
+    setTimeout(() => setCopiedLink((cur) => (cur === type ? null : cur)), 2000);
   };
 
-  const shareReferralLink = () => {
-    if (!referralLink) return;
+  const shareLink = (link: string) => {
+    if (!link) return;
     const shareText = t('referral.shareMessage', {
       percent: referralInfo?.commission_percent || 0,
       botName: branding?.name || import.meta.env.VITE_APP_NAME || 'Cabinet',
@@ -95,13 +136,13 @@ export default function Profile() {
         .share({
           title: t('referral.title'),
           text: shareText,
-          url: referralLink,
+          url: link,
         })
         .catch(() => {});
       return;
     }
 
-    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`;
     openTelegramLink(telegramUrl);
   };
 
@@ -269,493 +310,573 @@ export default function Profile() {
     updateNotificationsMutation.mutate(update);
   };
 
-  return (
-    <motion.div
-      className="space-y-6"
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-    >
-      <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('profile.title')}</h1>
-      </motion.div>
+  const registeredAt = user?.created_at ? new Date(user.created_at).toLocaleDateString() : '-';
 
-      {/* User Info Card */}
-      <motion.div variants={staggerItem}>
-        <Card>
-          <h2 className="mb-6 text-lg font-semibold text-dark-100">{t('profile.accountInfo')}</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-              <span className="text-dark-400">{t('profile.telegramId')}</span>
-              <span className="font-medium text-dark-100">{user?.telegram_id}</span>
+  return (
+    <div className={cn('mitray-profile', revealed && 'in')}>
+      <div className="phead reveal d1">
+        <h1>{t('profile.title')}</h1>
+      </div>
+
+      <div className="prof-grid">
+        {/* LEFT */}
+        <div className="col">
+          {/* Account info */}
+          <div className="card reveal d1">
+            <div className="card-h">
+              <div className="t">{t('profile.accountInfo')}</div>
             </div>
-            {user?.username && (
-              <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-                <span className="text-dark-400">{t('profile.username')}</span>
-                <span className="font-medium text-dark-100">@{user.username}</span>
+            {user?.telegram_id != null && (
+              <div className="info-row">
+                <span className="k">{t('profile.telegramId')}</span>
+                <span className="v">{user.telegram_id}</span>
               </div>
             )}
-            <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-              <span className="text-dark-400">{t('profile.name')}</span>
-              <span className="font-medium text-dark-100">{displayName(user)}</span>
+            {user?.username && (
+              <div className="info-row">
+                <span className="k">{t('profile.username')}</span>
+                <span className="v">@{user.username}</span>
+              </div>
+            )}
+            <div className="info-row">
+              <span className="k">{t('profile.name')}</span>
+              <span className="v">{displayName(user)}</span>
             </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-dark-400">{t('profile.registeredAt')}</span>
-              <span className="font-medium text-dark-100">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}
-              </span>
+            <div className="info-row">
+              <span className="k">{t('profile.registeredAt')}</span>
+              <span className="v">{registeredAt}</span>
             </div>
           </div>
-        </Card>
-      </motion.div>
 
-      {/* Connected Accounts Link */}
-      <motion.div variants={staggerItem}>
-        <Card interactive onClick={() => navigate('/profile/accounts')}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-dark-100">
-                {t('profile.accounts.goToAccounts')}
-              </h2>
-              <p className="text-sm text-dark-400">{t('profile.accounts.subtitle')}</p>
-            </div>
-            <ArrowRightIcon className="h-5 w-5 text-dark-400" />
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Referral Link Widget */}
-      {referralTerms?.is_enabled && referralLink && (
-        <motion.div variants={staggerItem}>
-          <Card>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-dark-100">{t('referral.yourLink')}</h2>
-              <Link
-                to="/referral"
-                className="flex items-center gap-1 text-accent-400 transition-colors hover:text-accent-300"
-              >
-                <span className="text-sm">{t('referral.title')}</span>
-                <ArrowRightIcon className="h-4 w-4" />
+          {/* Linked accounts */}
+          <div className="card reveal d2">
+            <div className="card-h">
+              <div className="t">{t('profile.accounts.goToAccounts')}</div>
+              <Link to="/profile/accounts" className="lnk">
+                {t('profile.accounts.manageAll', 'Все аккаунты')}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
               </Link>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
-                <input type="text" readOnly value={referralLink} className="input w-full text-sm" />
+
+            {/* Telegram */}
+            <div className="acc">
+              <span className="ai">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="11" fill="#229ED9" />
+                  <path
+                    d="M5.5 11.8l11-4.3c.5-.18.95.12.78.9l-1.87 8.8c-.13.6-.5.74-1 .46l-2.77-2.04-1.34 1.29c-.15.15-.27.27-.55.27l.2-2.83 5.16-4.66c.22-.2-.05-.31-.35-.11l-6.38 4.02-2.75-.86c-.6-.19-.6-.6.13-.89z"
+                    fill="#fff"
+                  />
+                </svg>
+              </span>
+              <div className="an">
+                <b>Telegram</b>
+                <p>{user?.telegram_id ?? t('profile.notLinked', 'не привязан')}</p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={copyReferralLink}
-                  variant={copied ? 'primary' : 'primary'}
-                  className={copied ? 'bg-success-500 hover:bg-success-500' : ''}
-                >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
-                  <span className="ml-2">
-                    {copied ? t('referral.copied') : t('referral.copyLink')}
-                  </span>
-                </Button>
-                <Button onClick={shareReferralLink} variant="secondary">
-                  <ShareIcon className="h-4 w-4" />
-                  <span className="ml-2 hidden sm:inline">{t('referral.shareButton')}</span>
-                </Button>
-              </div>
+              {user?.telegram_id != null ? (
+                <span className="linked">
+                  <IcCheck />
+                  {t('profile.linked', 'Привязан')}
+                </span>
+              ) : (
+                <button className="bind" onClick={() => navigate('/profile/accounts')}>
+                  {t('profile.link', 'Привязать')}
+                </button>
+              )}
             </div>
-            <p className="mt-3 text-sm text-dark-500">
-              {t('referral.shareHint', { percent: referralInfo?.commission_percent || 0 })}
-            </p>
-          </Card>
-        </motion.div>
-      )}
 
-      {/* Email Section - only show when email auth is enabled */}
-      {isEmailAuthEnabled && (
-        <motion.div variants={staggerItem}>
-          <Card>
-            <h2 className="mb-6 text-lg font-semibold text-dark-100">{t('profile.emailAuth')}</h2>
+            {/* Email */}
+            <div className="acc">
+              <span className="ai">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--muted)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="M3 7l9 6 9-6" />
+                </svg>
+              </span>
+              <div className="an">
+                <b>Email</b>
+                <p>{user?.email || t('profile.notLinked', 'не привязан')}</p>
+              </div>
+              {user?.email ? (
+                user.email_verified || !isEmailVerificationEnabled ? (
+                  <span className="linked">
+                    <IcCheck />
+                    {t('profile.linked', 'Привязан')}
+                  </span>
+                ) : (
+                  <span className="linked warn">{t('profile.notVerified')}</span>
+                )
+              ) : (
+                <button className="bind" onClick={() => navigate('/profile/accounts')}>
+                  {t('profile.link', 'Привязать')}
+                </button>
+              )}
+            </div>
+          </div>
 
-            {user?.email ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-                  <span className="text-dark-400">Email</span>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-dark-100">{user.email}</span>
-                    {user.email_verified ? (
-                      <span className="badge-success">{t('profile.verified')}</span>
-                    ) : isEmailVerificationEnabled ? (
-                      <span className="badge-warning">{t('profile.notVerified')}</span>
-                    ) : null}
+          {/* Email management (verify / change) */}
+          {isEmailAuthEnabled && (
+            <div className="card reveal d3">
+              <div className="card-h">
+                <div className="t">{t('profile.emailAuth')}</div>
+              </div>
+
+              {user?.email ? (
+                <>
+                  <div className="info-row">
+                    <span className="k">Email</span>
+                    <span className="v" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {user.email}
+                      {user.email_verified ? (
+                        <span className="badge-v ok">{t('profile.verified')}</span>
+                      ) : isEmailVerificationEnabled ? (
+                        <span className="badge-v warn">{t('profile.notVerified')}</span>
+                      ) : null}
+                    </span>
                   </div>
-                </div>
 
-                {!user.email_verified && isEmailVerificationEnabled && (
-                  <div className="rounded-linear border border-warning-500/30 bg-warning-500/10 p-4">
-                    <p className="mb-4 text-sm text-warning-400">
-                      {t('profile.verificationRequired')}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        onClick={() => resendVerificationMutation.mutate()}
-                        loading={resendVerificationMutation.isPending}
-                        disabled={verificationResendCooldown > 0}
-                      >
-                        {verificationResendCooldown > 0
-                          ? t('profile.resendIn', { seconds: verificationResendCooldown })
-                          : t('profile.resendVerification')}
-                      </Button>
-                      <button
-                        onClick={() => setChangeEmailStep('email')}
-                        className="text-sm text-accent-400 transition-colors hover:text-accent-300"
-                      >
+                  {!user.email_verified && isEmailVerificationEnabled && (
+                    <div className="pf-box warn">
+                      <p style={{ marginBottom: 12 }}>{t('profile.verificationRequired')}</p>
+                      <div className="pf-actions" style={{ marginTop: 0 }}>
+                        <button
+                          className="pf-btn"
+                          onClick={() => resendVerificationMutation.mutate()}
+                          disabled={
+                            resendVerificationMutation.isPending || verificationResendCooldown > 0
+                          }
+                        >
+                          {verificationResendCooldown > 0
+                            ? t('profile.resendIn', { seconds: verificationResendCooldown })
+                            : t('profile.resendVerification')}
+                        </button>
+                        <button className="pf-link" onClick={() => setChangeEmailStep('email')}>
+                          {t('profile.changeEmail.button')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {user.email_verified && changeEmailStep === null && (
+                    <div className="pf-actions">
+                      <span className="pf-hint">{t('profile.canLoginWithEmail')}</span>
+                      <button className="pf-link" onClick={() => setChangeEmailStep('email')}>
                         {t('profile.changeEmail.button')}
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {user.email_verified && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-dark-400">{t('profile.canLoginWithEmail')}</p>
-                    <button
-                      onClick={() => setChangeEmailStep('email')}
-                      className="flex items-center gap-2 text-sm text-accent-400 transition-colors hover:text-accent-300"
-                    >
-                      <PencilIcon />
-                      <span>{t('profile.changeEmail.button')}</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Inline email change flow */}
-                <AnimatePresence>
+                  {/* Inline change flow */}
                   {changeEmailStep === 'email' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="space-y-3 border-t border-dark-800/50 pt-4">
-                        <label className="block text-sm font-medium text-dark-400">
-                          {t('profile.changeEmail.newEmail')}
-                        </label>
-                        <input
-                          ref={newEmailInputRef}
-                          type="email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleSendChangeCode();
-                            }
-                          }}
-                          placeholder="new@email.com"
-                          className="input w-full"
-                          autoComplete="email"
-                        />
-                        {changeError && <p className="text-sm text-error-400">{changeError}</p>}
-                        <div className="flex items-center gap-3">
-                          <Button
-                            onClick={handleSendChangeCode}
-                            loading={requestEmailChangeMutation.isPending}
-                            disabled={!newEmail.trim()}
-                          >
-                            {t('profile.changeEmail.sendCode')}
-                          </Button>
-                          <button
-                            onClick={resetChangeEmail}
-                            className="text-sm text-dark-400 hover:text-dark-200"
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
+                    <div className="pf-field">
+                      <label className="pf-label">{t('profile.changeEmail.newEmail')}</label>
+                      <input
+                        ref={newEmailInputRef}
+                        type="email"
+                        className="pf-input"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSendChangeCode();
+                          }
+                        }}
+                        placeholder="new@email.com"
+                        autoComplete="email"
+                      />
+                      {changeError && <p className="pf-err">{changeError}</p>}
+                      <div className="pf-actions">
+                        <button
+                          className="pf-btn"
+                          onClick={handleSendChangeCode}
+                          disabled={!newEmail.trim() || requestEmailChangeMutation.isPending}
+                        >
+                          {t('profile.changeEmail.sendCode')}
+                        </button>
+                        <button className="pf-link muted" onClick={resetChangeEmail}>
+                          {t('common.cancel')}
+                        </button>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
 
                   {changeEmailStep === 'code' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="space-y-3 border-t border-dark-800/50 pt-4">
-                        <div className="rounded-linear border border-accent-500/30 bg-accent-500/10 p-3">
-                          <p className="text-sm text-accent-400">
-                            {t('profile.changeEmail.codeSentTo', { email: newEmail })}
-                          </p>
-                        </div>
-                        <label className="block text-sm font-medium text-dark-400">
-                          {t('profile.changeEmail.verificationCode')}
-                        </label>
-                        <input
-                          ref={codeInputRef}
-                          type="text"
-                          inputMode="numeric"
-                          value={changeCode}
-                          onChange={(e) => setChangeCode(e.target.value.replace(/\D/g, ''))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleVerifyChangeCode();
-                            }
-                          }}
-                          placeholder="000000"
-                          maxLength={6}
-                          className="input w-full text-center text-2xl tracking-[0.5em]"
-                          autoComplete="one-time-code"
-                        />
-                        {changeError && <p className="text-sm text-error-400">{changeError}</p>}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Button
-                              onClick={handleVerifyChangeCode}
-                              loading={verifyEmailChangeMutation.isPending}
-                              disabled={!changeCode.trim()}
-                            >
-                              {t('profile.changeEmail.verify')}
-                            </Button>
-                            <button
-                              onClick={() => {
-                                setChangeEmailStep('email');
-                                setChangeCode('');
-                                setChangeError(null);
-                              }}
-                              className="text-sm text-dark-400 hover:text-dark-200"
-                            >
-                              {t('common.back')}
-                            </button>
-                          </div>
+                    <div className="pf-field">
+                      <div className="pf-box accent" style={{ marginTop: 0, marginBottom: 12 }}>
+                        {t('profile.changeEmail.codeSentTo', { email: newEmail })}
+                      </div>
+                      <label className="pf-label">
+                        {t('profile.changeEmail.verificationCode')}
+                      </label>
+                      <input
+                        ref={codeInputRef}
+                        type="text"
+                        inputMode="numeric"
+                        className="pf-input code"
+                        value={changeCode}
+                        onChange={(e) => setChangeCode(e.target.value.replace(/\D/g, ''))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleVerifyChangeCode();
+                          }
+                        }}
+                        placeholder="000000"
+                        maxLength={6}
+                        autoComplete="one-time-code"
+                      />
+                      {changeError && <p className="pf-err">{changeError}</p>}
+                      <div className="pf-actions" style={{ justifyContent: 'space-between' }}>
+                        <div className="pf-actions" style={{ marginTop: 0 }}>
                           <button
-                            onClick={handleResendChangeCode}
-                            disabled={resendCooldown > 0 || requestEmailChangeMutation.isPending}
-                            className={`text-sm ${resendCooldown > 0 ? 'text-dark-500' : 'text-accent-400 hover:text-accent-300'}`}
+                            className="pf-btn"
+                            onClick={handleVerifyChangeCode}
+                            disabled={!changeCode.trim() || verifyEmailChangeMutation.isPending}
                           >
-                            {resendCooldown > 0
-                              ? t('profile.changeEmail.resendIn', { seconds: resendCooldown })
-                              : t('profile.changeEmail.resendCode')}
+                            {t('profile.changeEmail.verify')}
+                          </button>
+                          <button
+                            className="pf-link muted"
+                            onClick={() => {
+                              setChangeEmailStep('email');
+                              setChangeCode('');
+                              setChangeError(null);
+                            }}
+                          >
+                            {t('common.back')}
                           </button>
                         </div>
+                        <button
+                          className="pf-link"
+                          onClick={handleResendChangeCode}
+                          disabled={resendCooldown > 0 || requestEmailChangeMutation.isPending}
+                        >
+                          {resendCooldown > 0
+                            ? t('profile.changeEmail.resendIn', { seconds: resendCooldown })
+                            : t('profile.changeEmail.resendCode')}
+                        </button>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
 
                   {changeEmailStep === 'success' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
+                    <div
+                      className="pf-box ok"
+                      style={{ display: 'flex', gap: 12, alignItems: 'center' }}
                     >
-                      <div className="border-t border-dark-800/50 pt-4">
-                        <div className="flex items-center gap-3 rounded-linear border border-success-500/30 bg-success-500/10 p-4">
-                          <CheckIcon />
-                          <div>
-                            <p className="font-medium text-success-400">
-                              {t('profile.changeEmail.success')}
-                            </p>
-                            <p className="text-sm text-dark-400">{newEmail}</p>
-                          </div>
-                        </div>
+                      <IcCheck />
+                      <div>
+                        <p style={{ fontWeight: 600 }}>{t('profile.changeEmail.success')}</p>
+                        <p style={{ color: 'var(--muted)' }}>{newEmail}</p>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-dark-400">{t('profile.linkEmailDescription')}</p>
-                <Button variant="primary" onClick={() => navigate('/profile/accounts')}>
-                  {t('profile.linkEmail')}
-                </Button>
-              </div>
-            )}
 
-            {(error || success) && user?.email && (
-              <div className="mt-4">
-                {error && (
-                  <div className="rounded-linear border border-error-500/30 bg-error-500/10 p-4 text-sm text-error-400">
-                    {error}
+                  {error && <div className="pf-box err">{error}</div>}
+                  {success && <div className="pf-box ok">{success}</div>}
+                </>
+              ) : (
+                <>
+                  <p className="pf-hint">{t('profile.linkEmailDescription')}</p>
+                  <div className="pf-actions">
+                    <button className="pf-btn" onClick={() => navigate('/profile/accounts')}>
+                      {t('profile.linkEmail')}
+                    </button>
                   </div>
-                )}
-                {success && (
-                  <div className="rounded-linear border border-success-500/30 bg-success-500/10 p-4 text-sm text-success-400">
-                    {success}
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Notification Settings */}
-      <motion.div variants={staggerItem}>
-        <Card>
-          <h2 className="mb-6 text-lg font-semibold text-dark-100">
-            {t('profile.notifications.title')}
-          </h2>
-
-          {notificationsLoading ? (
-            <div className="flex justify-center py-4">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+                </>
+              )}
             </div>
-          ) : notificationSettings ? (
-            <div className="space-y-6">
-              {/* Subscription Expiry */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.subscriptionExpiry')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.subscriptionExpiryDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.subscription_expiry_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('subscription_expiry_enabled', checked)
-                    }
-                  />
-                </div>
-                {notificationSettings.subscription_expiry_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.daysBeforeExpiry')}
-                    </span>
-                    <select
-                      value={notificationSettings.subscription_expiry_days}
-                      onChange={(e) =>
-                        handleNotificationValue('subscription_expiry_days', Number(e.target.value))
-                      }
-                      className="input w-20 py-1"
-                    >
-                      {[1, 2, 3, 5, 7, 14].map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+          )}
+        </div>
+
+        {/* RIGHT */}
+        <div className="col">
+          {/* Referral links — bot deep-link + web cabinet */}
+          {referralTerms?.is_enabled && (referralLink || botReferralLink) && (
+            <div className="card reveal d3">
+              <div className="card-h">
+                <div className="t">{t('referral.yourLink')}</div>
+                <Link to="/referral" className="lnk">
+                  {t('referral.title')}
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </Link>
               </div>
 
-              {/* Traffic Warning */}
-              <div className="space-y-3 border-t border-dark-800/50 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.trafficWarning')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.trafficWarningDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.traffic_warning_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('traffic_warning_enabled', checked)
-                    }
-                  />
-                </div>
-                {notificationSettings.traffic_warning_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.atPercent')}
-                    </span>
-                    <select
-                      value={notificationSettings.traffic_warning_percent}
-                      onChange={(e) =>
-                        handleNotificationValue('traffic_warning_percent', Number(e.target.value))
-                      }
-                      className="input w-20 py-1"
+              {botReferralLink && (
+                <div className="ref-block">
+                  <span className="ref-cap">{t('referral.botLink', 'Телеграм-бот')}</span>
+                  <div className="ref-row">
+                    <div className="lnk-field">{botReferralLink}</div>
+                    <button
+                      className={cn('copy-btn', copiedLink === 'bot' && 'ok')}
+                      onClick={() => copyLink(botReferralLink, 'bot')}
                     >
-                      {[50, 70, 80, 90, 95].map((p) => (
-                        <option key={p} value={p}>
-                          {p}%
-                        </option>
-                      ))}
-                    </select>
+                      {copiedLink === 'bot' ? (
+                        <IcCheck />
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="9" y="9" width="11" height="11" rx="2.2" />
+                          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                        </svg>
+                      )}
+                      <span className="copy-label">
+                        {copiedLink === 'bot' ? t('referral.copied') : t('referral.copyLink')}
+                      </span>
+                    </button>
+                    <button
+                      className="ico-btn"
+                      onClick={() => shareLink(botReferralLink)}
+                      title={t('referral.shareButton')}
+                    >
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 16V4M8 8l4-4 4 4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                      </svg>
+                    </button>
                   </div>
-                )}
-              </div>
-
-              {/* Balance Low */}
-              <div className="space-y-3 border-t border-dark-800/50 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.balanceLow')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.balanceLowDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.balance_low_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('balance_low_enabled', checked)
-                    }
-                  />
                 </div>
-                {notificationSettings.balance_low_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.threshold')}
-                    </span>
-                    <input
-                      type="number"
-                      value={notificationSettings.balance_low_threshold}
-                      onChange={(e) =>
-                        handleNotificationValue('balance_low_threshold', Number(e.target.value))
-                      }
-                      min={0}
-                      className="input w-24 py-1"
+              )}
+
+              {referralLink && (
+                <div className="ref-block">
+                  <span className="ref-cap">{t('referral.cabinetLink', 'Веб-кабинет')}</span>
+                  <div className="ref-row">
+                    <div className="lnk-field">{referralLink}</div>
+                    <button
+                      className={cn('copy-btn', copiedLink === 'cabinet' && 'ok')}
+                      onClick={() => copyLink(referralLink, 'cabinet')}
+                    >
+                      {copiedLink === 'cabinet' ? (
+                        <IcCheck />
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="9" y="9" width="11" height="11" rx="2.2" />
+                          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                        </svg>
+                      )}
+                      <span className="copy-label">
+                        {copiedLink === 'cabinet' ? t('referral.copied') : t('referral.copyLink')}
+                      </span>
+                    </button>
+                    <button
+                      className="ico-btn"
+                      onClick={() => shareLink(referralLink)}
+                      title={t('referral.shareButton')}
+                    >
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 16V4M8 8l4-4 4 4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="ref-note">
+                {t('referral.shareHint', { percent: referralInfo?.commission_percent || 0 })}
+              </p>
+            </div>
+          )}
+
+          {/* Notification settings */}
+          <div className="card reveal d4">
+            <div className="card-h">
+              <div className="t">{t('profile.notifications.title')}</div>
+            </div>
+
+            {notificationsLoading ? (
+              <div className="pf-loader">
+                <div className="pf-spin" />
+              </div>
+            ) : notificationSettings ? (
+              <>
+                {/* Subscription expiry */}
+                <div className="nset">
+                  <div className="nt">
+                    <b>{t('profile.notifications.subscriptionExpiry')}</b>
+                    <p>{t('profile.notifications.subscriptionExpiryDesc')}</p>
+                  </div>
+                  <div className="nright">
+                    {notificationSettings.subscription_expiry_enabled && (
+                      <select
+                        className="sel"
+                        value={notificationSettings.subscription_expiry_days}
+                        onChange={(e) =>
+                          handleNotificationValue(
+                            'subscription_expiry_days',
+                            Number(e.target.value),
+                          )
+                        }
+                      >
+                        {[1, 2, 3, 5, 7, 14].map((d) => (
+                          <option key={d} value={d}>
+                            {t('profile.notifications.daysValue', '{{count}} дн.', { count: d })}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <Toggle
+                      checked={notificationSettings.subscription_expiry_enabled}
+                      onChange={(v) => handleNotificationToggle('subscription_expiry_enabled', v)}
                     />
                   </div>
-                )}
-              </div>
-
-              {/* News */}
-              <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
-                <div>
-                  <p className="font-medium text-dark-100">{t('profile.notifications.news')}</p>
-                  <p className="text-sm text-dark-400">{t('profile.notifications.newsDesc')}</p>
                 </div>
-                <Switch
-                  checked={notificationSettings.news_enabled}
-                  onCheckedChange={(checked) => handleNotificationToggle('news_enabled', checked)}
-                />
-              </div>
 
-              {/* Promo Offers */}
-              <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
-                <div>
-                  <p className="font-medium text-dark-100">
-                    {t('profile.notifications.promoOffers')}
-                  </p>
-                  <p className="text-sm text-dark-400">
-                    {t('profile.notifications.promoOffersDesc')}
-                  </p>
+                {/* Traffic warning */}
+                <div className="nset">
+                  <div className="nt">
+                    <b>{t('profile.notifications.trafficWarning')}</b>
+                    <p>{t('profile.notifications.trafficWarningDesc')}</p>
+                  </div>
+                  <div className="nright">
+                    {notificationSettings.traffic_warning_enabled && (
+                      <select
+                        className="sel"
+                        value={notificationSettings.traffic_warning_percent}
+                        onChange={(e) =>
+                          handleNotificationValue('traffic_warning_percent', Number(e.target.value))
+                        }
+                      >
+                        {[50, 70, 80, 90, 95].map((p) => (
+                          <option key={p} value={p}>
+                            {p}%
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <Toggle
+                      checked={notificationSettings.traffic_warning_enabled}
+                      onChange={(v) => handleNotificationToggle('traffic_warning_enabled', v)}
+                    />
+                  </div>
                 </div>
-                <Switch
-                  checked={notificationSettings.promo_offers_enabled}
-                  onCheckedChange={(checked) =>
-                    handleNotificationToggle('promo_offers_enabled', checked)
-                  }
-                />
-              </div>
-            </div>
-          ) : (
-            <p className="text-dark-400">{t('profile.notifications.unavailable')}</p>
-          )}
-        </Card>
-      </motion.div>
-    </motion.div>
+
+                {/* Balance low */}
+                <div className="nset">
+                  <div className="nt">
+                    <b>{t('profile.notifications.balanceLow')}</b>
+                    <p>{t('profile.notifications.balanceLowDesc')}</p>
+                  </div>
+                  <div className="nright">
+                    {notificationSettings.balance_low_enabled && (
+                      <input
+                        type="number"
+                        className="sel"
+                        style={{ backgroundImage: 'none', paddingRight: 12, width: 96 }}
+                        value={notificationSettings.balance_low_threshold}
+                        min={0}
+                        onChange={(e) =>
+                          handleNotificationValue('balance_low_threshold', Number(e.target.value))
+                        }
+                      />
+                    )}
+                    <Toggle
+                      checked={notificationSettings.balance_low_enabled}
+                      onChange={(v) => handleNotificationToggle('balance_low_enabled', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* News */}
+                <div className="nset">
+                  <div className="nt">
+                    <b>{t('profile.notifications.news')}</b>
+                    <p>{t('profile.notifications.newsDesc')}</p>
+                  </div>
+                  <div className="nright">
+                    <Toggle
+                      checked={notificationSettings.news_enabled}
+                      onChange={(v) => handleNotificationToggle('news_enabled', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* Promo offers */}
+                <div className="nset">
+                  <div className="nt">
+                    <b>{t('profile.notifications.promoOffers')}</b>
+                    <p>{t('profile.notifications.promoOffersDesc')}</p>
+                  </div>
+                  <div className="nright">
+                    <Toggle
+                      checked={notificationSettings.promo_offers_enabled}
+                      onChange={(v) => handleNotificationToggle('promo_offers_enabled', v)}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="pf-hint">{t('profile.notifications.unavailable')}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
