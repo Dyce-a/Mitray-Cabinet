@@ -22,10 +22,9 @@ export function ThemeColorsProvider({ children }: ThemeColorsProviderProps) {
   const { theme: platformTheme, capabilities } = usePlatform();
   const { isDark } = useTheme();
 
-  // During the redesign we want the Mitray brand palette to render locally even
-  // though the (production) backend still serves the legacy default colors.
-  // VITE_FORCE_BRAND_THEME=true (local .env) ignores backend colors and applies
-  // the brand defaults; production builds leave it unset → backend colors win.
+  // VITE_FORCE_BRAND_THEME=true (local .env) ignores backend colors entirely;
+  // otherwise backend colors win (themeColorsApi.getColors already maps the
+  // untouched legacy upstream palette to the brand defaults).
   const forceBrand = import.meta.env.VITE_FORCE_BRAND_THEME === 'true';
   const activeColors = forceBrand ? DEFAULT_THEME_COLORS : colors || DEFAULT_THEME_COLORS;
 

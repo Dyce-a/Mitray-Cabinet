@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { subscriptionApi } from '../../api/subscription';
 import { formatTraffic } from '../../utils/formatTraffic';
 import { getFlagEmoji } from '../../utils/subscriptionHelpers';
 import type { Subscription } from '../../types';
@@ -17,10 +19,10 @@ interface ConnectionHeroProps {
 /**
  * Connection cockpit hero — the reused world map (worldMap.svg) as a live
  * backdrop with a status overlay. Data is real where the cabinet provides it:
- * subscription status, traffic usage, and the granted server/location list
- * (subscription.servers → flag + name). Live tunnel telemetry (ping/speed / the
- * exact active node) is client-side VPN state the cabinet backend cannot see, so
- * it is intentionally not fabricated here.
+ * subscription status, traffic usage, the last connected Remnawave node (via
+ * the fork-only /subscription/connection-info endpoint, falling back to the
+ * granted location list when absent). Live tunnel telemetry (ping/speed) is
+ * client-side VPN state the backend cannot see, so it is not fabricated here.
  */
 export default function ConnectionHero({ subscription, trafficData }: ConnectionHeroProps) {
   const { t } = useTranslation();
@@ -39,17 +41,33 @@ export default function ConnectionHero({ subscription, trafficData }: Connection
     return () => io.disconnect();
   }, []);
 
+  // The node the user's VPN client last connected to (Remnawave panel data via
+  // a fork-only bot endpoint). Errors (e.g. unpatched backend → 404) simply
+  // fall back to the subscription's location list below.
+  const { data: connInfo } = useQuery({
+    queryKey: ['connection-info', subscription.id],
+    queryFn: () => subscriptionApi.getConnectionInfo(subscription.id),
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
   const usedPercent = trafficData?.traffic_used_percent ?? subscription.traffic_used_percent;
   const usedGb = trafficData?.traffic_used_gb ?? subscription.traffic_used_gb;
   const isUnlimited = trafficData?.is_unlimited ?? subscription.traffic_limit_gb === 0;
 
   const servers = subscription.servers ?? [];
   const primary = servers[0];
-  const flag = getFlagEmoji(primary?.country_code) || '🌍';
-  const name = primary?.name || t('dashboard.hero.vpnActive', 'VPN активен');
   const locationsCount = servers.length || subscription.connected_squads?.length || 0;
-  const sub =
-    locationsCount > 1
+
+  const connectedNode = connInfo?.found ? connInfo.last_connected_node_name : null;
+  const flag =
+    getFlagEmoji(connectedNode ? connInfo?.last_connected_node_country : primary?.country_code) ||
+    '🌍';
+  const name = connectedNode || primary?.name || t('dashboard.hero.vpnActive', 'VPN активен');
+  const sub = connectedNode
+    ? t('dashboard.hero.currentServer', 'Твой сервер')
+    : locationsCount > 1
       ? t('dashboard.hero.locationsAvailable', {
           count: locationsCount,
           defaultValue: '{{count}} локаций доступно',

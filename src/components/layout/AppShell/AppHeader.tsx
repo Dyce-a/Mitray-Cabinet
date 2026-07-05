@@ -126,9 +126,13 @@ export function AppHeader({
 
   // Telegram fullscreen top inset — the drawer covers the full height, so its
   // top row must clear the native TG header too (env() insets are 0 in TG).
+  // Per TG docs the insets ADD UP: safeAreaInset = status bar / notch,
+  // contentSafeAreaInset = TG's own button row below it. The old
+  // max(...)+48 double-counted the TG row and left a dead band above the
+  // header; fall back to the old constant only when a client reports zeros.
+  const tgInsetSum = safeAreaInset.top + contentSafeAreaInset.top;
   const tgTopPad = isFullscreen
-    ? Math.max(safeAreaInset.top, contentSafeAreaInset.top) +
-      (telegramPlatform === 'android' ? 48 : 45)
+    ? (tgInsetSum > 0 ? tgInsetSum : telegramPlatform === 'android' ? 48 : 45) + 6
     : 0;
 
   // Primary drawer nav — feature-flagged extras follow the core six.

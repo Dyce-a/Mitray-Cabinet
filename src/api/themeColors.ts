@@ -4,6 +4,7 @@ import {
   DEFAULT_THEME_COLORS,
   EnabledThemes,
   DEFAULT_ENABLED_THEMES,
+  isLegacyUpstreamColors,
 } from '../types/theme';
 
 export const themeColorsApi = {
@@ -11,7 +12,10 @@ export const themeColorsApi = {
   getColors: async (): Promise<ThemeSettings> => {
     try {
       const response = await apiClient.get<ThemeSettings>('/cabinet/branding/colors');
-      return response.data;
+      // A backend whose colors were never customized in the admin serves the
+      // untouched legacy upstream palette — treat that as "unset" so the
+      // Mitray brand palette applies everywhere instead of upstream-blue.
+      return isLegacyUpstreamColors(response.data) ? DEFAULT_THEME_COLORS : response.data;
     } catch {
       // Return default colors if endpoint not available
       return DEFAULT_THEME_COLORS;

@@ -57,6 +57,34 @@ export const DEFAULT_THEME_COLORS: ThemeColors = {
   error: '#ef4444',
 };
 
+// Legacy upstream default palette. Backends that have never had their colors
+// customized in the admin ThemeTab serve exactly this set — treat it as
+// "unset" and fall back to the Mitray brand palette instead of painting the
+// cabinet upstream-blue. An admin saving ANY other palette still wins.
+export const LEGACY_UPSTREAM_THEME_COLORS: ThemeColors = {
+  accent: '#3b82f6',
+
+  darkBackground: '#0a0f1a',
+  darkSurface: '#0f172a',
+  darkText: '#f1f5f9',
+  darkTextSecondary: '#94a3b8',
+
+  lightBackground: '#F7E7CE',
+  lightSurface: '#FEF9F0',
+  lightText: '#1F1A12',
+  lightTextSecondary: '#7D6B48',
+
+  success: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+};
+
+export function isLegacyUpstreamColors(colors: ThemeColors): boolean {
+  return (Object.keys(LEGACY_UPSTREAM_THEME_COLORS) as (keyof ThemeColors)[]).every(
+    (key) => colors[key]?.toLowerCase() === LEGACY_UPSTREAM_THEME_COLORS[key].toLowerCase(),
+  );
+}
+
 // Color shade levels for palette generation
 export const SHADE_LEVELS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 

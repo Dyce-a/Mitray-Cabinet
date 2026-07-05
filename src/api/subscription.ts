@@ -503,6 +503,25 @@ export const subscriptionApi = {
     return response.data;
   },
 
+  // Fork addition (backed by a fork-only bot endpoint): the current user's
+  // last connected Remnawave node for the dashboard hero. 404s gracefully on
+  // an unpatched backend — callers must treat errors as "no data".
+  getConnectionInfo: async (
+    subscriptionId?: number,
+  ): Promise<{
+    found: boolean;
+    online_at: string | null;
+    last_connected_node_uuid: string | null;
+    last_connected_node_name: string | null;
+    last_connected_node_country: string | null;
+  }> => {
+    const response = await apiClient.get(
+      '/cabinet/subscription/connection-info',
+      withSubId(subscriptionId),
+    );
+    return response.data;
+  },
+
   getHappDownloads: async (): Promise<{
     platforms: Record<
       string,
