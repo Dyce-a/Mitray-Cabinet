@@ -530,14 +530,14 @@ export default function Login() {
             )}
             <div className="cqr-wrap" style={{ position: 'relative' }}>
               <button
-                className={`btn btn-qr${showLandingQR ? 'on' : ''}`}
+                className={showLandingQR ? 'btn btn-qr on' : 'btn btn-qr'}
                 onClick={() => setShowLandingQR((v) => !v)}
                 aria-label={t('auth.scanQrToLogin', 'QR')}
                 type="button"
               >
                 <QrIcon />
               </button>
-              <div className={`qr-pop${showLandingQR ? 'show' : ''}`}>
+              <div className={showLandingQR ? 'qr-pop show' : 'qr-pop'}>
                 <div style={{ background: '#fff', padding: 10, borderRadius: 12, lineHeight: 0 }}>
                   {botLink && <QRCodeSVG value={botLink} size={132} level="M" />}
                 </div>
@@ -778,14 +778,14 @@ export default function Login() {
                     <div className="tabs st d2">
                       <button
                         type="button"
-                        className={`tab${authMode === 'login' ? 'on' : ''}`}
+                        className={authMode === 'login' ? 'tab on' : 'tab'}
                         onClick={() => setAuthMode('login')}
                       >
                         {t('auth.login')}
                       </button>
                       <button
                         type="button"
-                        className={`tab${authMode === 'register' ? 'on' : ''}`}
+                        className={authMode === 'register' ? 'tab on' : 'tab'}
                         onClick={() => setAuthMode('register')}
                       >
                         {t('auth.register', 'Регистрация')}

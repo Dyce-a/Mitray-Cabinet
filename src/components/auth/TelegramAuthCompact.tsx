@@ -150,14 +150,14 @@ export default function TelegramAuthCompact() {
         </button>
         <div className="cqr-wrap">
           <button
-            className={`cqr${showQR ? 'on' : ''}`}
+            className={showQR ? 'cqr on' : 'cqr'}
             type="button"
             onClick={onQR}
             aria-label={t('auth.scanQrToLogin', 'QR-код для входа')}
           >
             <QrIcon />
           </button>
-          <div className={`cqr-pop${showQR ? 'show' : ''}`}>
+          <div className={showQR ? 'cqr-pop show' : 'cqr-pop'}>
             <div style={{ background: '#fff', padding: 10, borderRadius: 12, lineHeight: 0 }}>
               {url ? (
                 <QRCodeSVG value={url} size={132} level="M" />
