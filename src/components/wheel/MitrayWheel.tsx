@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { WheelPrize } from '../../api/wheel';
-import { iconKeyFor, iconSegments, isJackpot, type PrizeLike } from './prizeIcons';
+import { iconKeyFor, iconSegments, isJackpot, shortLabel, type PrizeLike } from './prizeIcons';
 
 /**
  * Колесо удачи в дизайне Mitray (порт прототипа design-lab/wheel.html).
@@ -204,8 +204,8 @@ const MitrayWheel = memo(function MitrayWheel({
                     <path key={k} d={seg} />
                   ))}
                 </g>
-                <text className="wh-label" x={C} y={C - R + 100} textAnchor="middle">
-                  {prize.display_name}
+                <text className="wh-label" x={C} y={C - R + 98} textAnchor="middle">
+                  {shortLabel(prize)}
                 </text>
               </g>
             </g>

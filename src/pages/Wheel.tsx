@@ -9,7 +9,11 @@ import { isJackpot } from '../components/wheel/prizeIcons';
 import { usePlatform, useHaptic, useNotify } from '../platform';
 import '../styles/wheel.css';
 
-type PaymentType = 'telegram_stars' | 'subscription_days' | 'free';
+type PayMode = 'free' | 'balance' | 'stars' | 'days';
+
+/** Режим в UI → тип оплаты, который понимает бэкенд. */
+const apiPaymentType = (mode: PayMode): 'telegram_stars' | 'subscription_days' | 'free' =>
+  mode === 'free' ? 'free' : mode === 'days' ? 'subscription_days' : 'telegram_stars';
 
 /** Угол остановки на конкретном секторе (совместим с формулой бэкенда). */
 function rotationForIndex(prizes: WheelPrize[], prizeIndex: number): number {
@@ -69,7 +73,7 @@ export default function Wheel() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [targetRotation, setTargetRotation] = useState<number | null>(null);
   const [spinResult, setSpinResult] = useState<SpinResult | null>(null);
-  const [paymentType, setPaymentType] = useState<PaymentType>('telegram_stars');
+  const [paymentType, setPaymentType] = useState<PayMode>('balance');
   const [isPayingStars, setIsPayingStars] = useState(false);
   const [showStarsConfirm, setShowStarsConfirm] = useState(false);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<number | null>(null);
@@ -111,10 +115,12 @@ export default function Wheel() {
 
     if (config.free_spin_available) {
       setPaymentType('free');
+    } else if (starsEnabled && config.can_pay_stars) {
+      setPaymentType('balance');
     } else if (starsEnabled) {
-      setPaymentType('telegram_stars');
+      setPaymentType('stars');
     } else if (daysEnabled) {
-      setPaymentType('subscription_days');
+      setPaymentType('days');
     }
 
     if (config.eligible_subscriptions?.length === 1) {
@@ -125,7 +131,9 @@ export default function Wheel() {
   // Фриспин истрачен -> апселл: переключаемся на платный способ
   useEffect(() => {
     if (paymentType === 'free' && config && !config.free_spin_available && !isSpinning) {
-      setPaymentType(config.spin_cost_stars_enabled ? 'telegram_stars' : 'subscription_days');
+      setPaymentType(
+        config.spin_cost_stars_enabled ? (config.can_pay_stars ? 'balance' : 'stars') : 'days',
+      );
     }
   }, [config, paymentType, isSpinning]);
 
@@ -318,7 +326,8 @@ export default function Wheel() {
   };
 
   const spinMutation = useMutation({
-    mutationFn: () => wheelApi.spin(paymentType, selectedSubscriptionId ?? undefined),
+    mutationFn: () =>
+      wheelApi.spin(apiPaymentType(paymentType), selectedSubscriptionId ?? undefined),
     onSuccess: (result) => {
       if (result.success) {
         setTargetRotation(result.rotation_degrees);
@@ -348,7 +357,7 @@ export default function Wheel() {
 
   const handleSpin = () => {
     if (isSpinning) return;
-    if (paymentType !== 'free' && !config?.can_spin) return;
+    if (paymentType !== 'free' && paymentType !== 'balance' && !config?.can_spin) return;
     setSpinResult(null);
     setIsSpinning(true);
     spinMutation.mutate();
@@ -360,13 +369,14 @@ export default function Wheel() {
       handleSpin();
       return;
     }
-    if (paymentType === 'telegram_stars') {
+    if (paymentType === 'stars') {
       if (!config?.spin_cost_stars_enabled || !config?.spin_cost_stars) {
         notify.warning(t('wheel.starsNotAvailable'));
         return;
       }
       setShowStarsConfirm(true);
     } else {
+      // баланс / дни / фриспин — спин напрямую, без инвойса
       handleSpin();
     }
   };
@@ -475,7 +485,7 @@ export default function Wheel() {
   const dailyLimitReached = config.daily_limit > 0 && config.user_spins_today >= config.daily_limit;
   const noSubscription = !config.has_subscription;
   const needsSubscriptionPick =
-    paymentType === 'subscription_days' &&
+    paymentType === 'days' &&
     !!config.eligible_subscriptions &&
     config.eligible_subscriptions.length > 1 &&
     !selectedSubscriptionId;
@@ -483,6 +493,10 @@ export default function Wheel() {
   const spinsLeft =
     config.daily_limit > 0 ? Math.max(0, config.daily_limit - config.user_spins_today) : 0;
   const jackpot = config.prizes.find((p) => isJackpot(p));
+
+  // цена спина с баланса = эквивалент звёзд в рублях (бэкенд считает его сам)
+  const balanceCost = config.required_balance_kopeks / 100;
+  const canPayBalance = starsEnabled && config.can_pay_stars;
 
   const spinDisabled =
     isSpinning ||
@@ -492,7 +506,11 @@ export default function Wheel() {
       ? !freeReady
       : dailyLimitReached ||
         needsSubscriptionPick ||
-        (paymentType === 'telegram_stars' ? !starsEnabled : !config.can_spin));
+        (paymentType === 'balance'
+          ? !canPayBalance
+          : paymentType === 'stars'
+            ? !starsEnabled
+            : !config.can_spin));
 
   const hubTitle = isSpinning
     ? t('wheel.spinning')
@@ -502,15 +520,21 @@ export default function Wheel() {
         ? t('wheel.errors.dailyLimitReached')
         : t('wheel.spin');
 
-  const hubSub = isSpinning
-    ? ''
-    : paymentType === 'free'
-      ? freeReady
+  const hubSub = (() => {
+    if (isSpinning) return '';
+    if (paymentType === 'free') {
+      return freeReady
         ? t('wheel.freeSpinFree', 'бесплатно!')
-        : t('wheel.freeSpinSoon', 'до фриспина')
-      : paymentType === 'telegram_stars'
-        ? `${config.spin_cost_stars} ⭐`
-        : t('wheel.days', { count: config.spin_cost_days ?? 0 });
+        : t('wheel.freeSpinSoon', 'до фриспина');
+    }
+    if (paymentType === 'balance') {
+      return canPayBalance
+        ? `${balanceCost.toFixed(0)} ₽`
+        : t('wheel.notEnoughBalance', 'не хватает баланса');
+    }
+    if (paymentType === 'stars') return `${config.spin_cost_stars} ⭐`;
+    return t('wheel.days', { count: config.spin_cost_days ?? 0 });
+  })();
 
   return (
     <div className="mitray-wheel animate-fade-in">
@@ -563,9 +587,20 @@ export default function Wheel() {
                 {starsEnabled && (
                   <button
                     type="button"
-                    className={paymentType === 'telegram_stars' ? 'on' : ''}
+                    className={paymentType === 'balance' ? 'on' : ''}
                     disabled={isSpinning}
-                    onClick={() => setPaymentType('telegram_stars')}
+                    onClick={() => setPaymentType('balance')}
+                    title={t('wheel.payFromBalance', 'Списать с баланса кабинета')}
+                  >
+                    {balanceCost.toFixed(0)} ₽
+                  </button>
+                )}
+                {starsEnabled && (
+                  <button
+                    type="button"
+                    className={paymentType === 'stars' ? 'on' : ''}
+                    disabled={isSpinning}
+                    onClick={() => setPaymentType('stars')}
                   >
                     ⭐ {config.spin_cost_stars}
                   </button>
@@ -573,9 +608,9 @@ export default function Wheel() {
                 {daysEnabled && (
                   <button
                     type="button"
-                    className={paymentType === 'subscription_days' ? 'on' : ''}
+                    className={paymentType === 'days' ? 'on' : ''}
                     disabled={isSpinning}
-                    onClick={() => setPaymentType('subscription_days')}
+                    onClick={() => setPaymentType('days')}
                   >
                     {t('wheel.days', { count: config.spin_cost_days ?? 0 })}
                   </button>
@@ -601,7 +636,7 @@ export default function Wheel() {
             </div>
 
             {/* выбор подписки для оплаты днями (мульти-тариф) */}
-            {paymentType === 'subscription_days' &&
+            {paymentType === 'days' &&
               config.eligible_subscriptions &&
               config.eligible_subscriptions.length > 1 && (
                 <div className="sub-pick">
@@ -705,6 +740,12 @@ export default function Wheel() {
             {!isSpinning && noSubscription && (
               <div className="hint warn">{t('wheel.errors.noSubscription')}</div>
             )}
+            {!isSpinning && !noSubscription && paymentType === 'balance' && !canPayBalance && (
+              <div className="hint warn">
+                {t('wheel.notEnoughBalanceHint', 'Не хватает средств на балансе')} ·{' '}
+                <Link to="/balance">{t('balance.topUp', 'Пополнить')}</Link>
+              </div>
+            )}
             {!isSpinning && !noSubscription && needsSubscriptionPick && (
               <div className="hint warn">
                 {t('wheel.errors.selectSubscription', 'Выберите подписку для списания дней')}
@@ -720,7 +761,7 @@ export default function Wheel() {
             )}
             {!isSpinning &&
               !noSubscription &&
-              paymentType === 'subscription_days' &&
+              paymentType === 'days' &&
               !dailyLimitReached &&
               !config.can_spin && <div className="hint">{t('wheel.errors.cannotSpin')}</div>}
           </div>

@@ -47,6 +47,22 @@ export function iconKeyFor(prize: PrizeLike): string {
 
 export const isJackpot = (prize: PrizeLike): boolean => iconKeyFor(prize) === 'gem';
 
+/**
+ * Короткая подпись для сектора колеса. В админке имена длинные («30 дней подписки»,
+ * «10 ₽ на баланс») — в дугу сектора они не влезают и налезают на соседей, поэтому
+ * на самом колесе показываем суть («30 дней», «10 ₽»). В списках и истории
+ * остаётся полное имя.
+ */
+export function shortLabel(prize: PrizeLike): string {
+  let s = (prize.display_name || '').trim();
+  s = s.replace(/^.*?\s[·—–-]\s+/, ''); // «Джекпот · 300 ₽» → «300 ₽»
+  s = s.replace(/\s+(на|за)\s+.*$/i, ''); // «10 ₽ на баланс» → «10 ₽», «20 ГБ на месяц» → «20 ГБ»
+  s = s.replace(/\s+подписки$/i, ''); // «5 дней подписки» → «5 дней»
+  s = s.trim();
+  if (!s) s = (prize.display_name || '').trim();
+  return s.length > 12 ? `${s.slice(0, 11)}…` : s;
+}
+
 /** Путь иконки разбит на подпути (в записи через ' M'), чтобы рендерить <path> списком. */
 export const iconSegments = (key: string): string[] => {
   const d = PRIZE_ICON_PATHS[key] ?? PRIZE_ICON_PATHS.gift;
