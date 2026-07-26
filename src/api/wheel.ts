@@ -32,6 +32,10 @@ export interface WheelConfig {
   required_balance_kopeks: number;
   has_subscription: boolean;
   eligible_subscriptions: EligibleSubscription[] | null;
+  /** Mitray: бесплатный спин раз в N часов (форк-патч бота, в апстриме отсутствует) */
+  free_spin_available?: boolean;
+  free_spin_next_at?: string | null;
+  free_spin_interval_hours?: number;
 }
 
 export interface SpinAvailability {
@@ -198,7 +202,7 @@ export const wheelApi = {
   },
 
   spin: async (
-    paymentType: 'telegram_stars' | 'subscription_days',
+    paymentType: 'telegram_stars' | 'subscription_days' | 'free',
     subscriptionId?: number,
   ): Promise<SpinResult> => {
     const response = await apiClient.post<SpinResult>('/cabinet/wheel/spin', {
