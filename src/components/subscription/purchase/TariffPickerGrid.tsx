@@ -1,9 +1,11 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { usePromoDiscount } from '../../../hooks/usePromoDiscount';
-import { ArrowDownIcon, DevicesIcon, RestartIcon } from '@/components/icons';
+import { ArrowDownIcon, DevicesIcon, GlobeIcon, RestartIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { TariffLocationsPanel } from './TariffLocationsPanel';
 import type { Tariff, Subscription, PurchaseOptions } from '../../../types';
 
 // ──────────────────────────────────────────────────────────────────
@@ -39,6 +41,35 @@ export function TariffPickerGrid({
   const navigate = useNavigate();
   const { formatAmount, currencySymbol } = useCurrency();
   const { applyPromoDiscount } = usePromoDiscount();
+
+  // Locations reveal: one card at a time. `closingId` keeps the panel
+  // mounted for its fade-out while the card face fades back in.
+  const [openLocations, setOpenLocations] = useState<number | null>(null);
+  const [closingLocations, setClosingLocations] = useState<number | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  const openLocationsFor = (tariffId: number) => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setClosingLocations(null);
+    setOpenLocations(tariffId);
+  };
+
+  const closeLocations = useCallback(() => {
+    if (openLocations === null) return;
+    setClosingLocations(openLocations);
+    setOpenLocations(null);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setClosingLocations(null), 200);
+    // hand focus back to the spec that opened the panel
+    document.getElementById(`tariff-locs-trigger-${openLocations}`)?.focus({ preventScroll: true });
+  }, [openLocations]);
 
   const formatPrice = (kopeks: number) =>
     kopeks === 0
@@ -176,6 +207,11 @@ export function TariffPickerGrid({
             const isLegacySubscription =
               subscription && !subscription.is_trial && !subscription.tariff_id;
 
+            const serverList = tariff.servers || [];
+            const serversTotal = tariff.servers_count || serverList.length;
+            const locationsOpen = openLocations === tariff.id;
+            const locationsMounted = locationsOpen || closingLocations === tariff.id;
+
             return (
               <div
                 key={tariff.id}
@@ -183,6 +219,7 @@ export function TariffPickerGrid({
                   'card tcard reveal',
                   `d${Math.min(idx + 1, 4)}`,
                   isCurrentTariff && 'current',
+                  locationsOpen && 'locs-open',
                 )}
               >
                 <div className="tc-top">
@@ -212,6 +249,48 @@ export function TariffPickerGrid({
                       </span>
                     </div>
                   )}
+                  {/* Locations — quiet affordance: dotted underline, opens the
+                      in-card reveal with the squads this tariff unlocks. */}
+                  {serverList.length > 0 ? (
+                    <button
+                      type="button"
+                      id={`tariff-locs-trigger-${tariff.id}`}
+                      className="spec spec-locs"
+                      onClick={() => openLocationsFor(tariff.id)}
+                      aria-expanded={locationsOpen}
+                      aria-controls={`tariff-locs-${tariff.id}`}
+                    >
+                      <GlobeIcon className="h-4 w-4" />
+                      <span className="sl-text">
+                        {t('subscription.tariff.locationsCount', {
+                          count: serversTotal,
+                          defaultValue: '{{count}} локаций',
+                          defaultValue_one: '{{count}} локация',
+                          defaultValue_few: '{{count}} локации',
+                          defaultValue_many: '{{count}} локаций',
+                        })}
+                      </span>
+                      <svg
+                        className="sl-caret"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.4}
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" />
+                      </svg>
+                    </button>
+                  ) : (
+                    serversTotal === 0 && (
+                      <div className="spec">
+                        <GlobeIcon className="h-4 w-4" />
+                        <span className="s-mut">
+                          {t('subscription.tariff.allLocations', 'Все локации')}
+                        </span>
+                      </div>
+                    )
+                  )}
                 </div>
 
                 {renderPrice(tariff)}
@@ -237,6 +316,16 @@ export function TariffPickerGrid({
                   <button className="p-btn" onClick={() => onSelectTariff(tariff)}>
                     {t('subscription.purchase')}
                   </button>
+                )}
+
+                {locationsMounted && (
+                  <TariffLocationsPanel
+                    id={`tariff-locs-${tariff.id}`}
+                    servers={serverList}
+                    totalCount={serversTotal}
+                    closing={!locationsOpen}
+                    onClose={closeLocations}
+                  />
                 )}
               </div>
             );

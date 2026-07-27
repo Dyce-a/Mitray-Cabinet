@@ -304,6 +304,8 @@ export interface TariffPeriod {
 export interface TariffServer {
   uuid: string;
   name: string;
+  /** ISO-3166 alpha-2; older backends omit it (flag is then guessed by name). */
+  country_code?: string | null;
 }
 
 export interface Tariff {
