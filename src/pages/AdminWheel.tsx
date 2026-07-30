@@ -916,6 +916,57 @@ export default function AdminWheel() {
             />
           </div>
 
+          {/* Честная экономика (форк-патч бота): апстримный RTP выше мешает
+              бесплатные спины с платными и считает призы по номиналу. */}
+          {stats.economics && (
+            <div className="bento-card space-y-3 p-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="font-semibold text-dark-100">
+                  {t('admin.wheel.statistics.economics.title', 'Честная экономика')}
+                </h3>
+                <span className="text-xs text-dark-500">
+                  {t('admin.wheel.statistics.economics.paidOnly', 'только платные спины')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard
+                  label={t('admin.wheel.statistics.economics.paidSpins', 'Платных спинов')}
+                  value={`${stats.economics.paid_spins} / ${stats.economics.free_spins} ${t('admin.wheel.statistics.economics.free', 'фри')}`}
+                  icon={<WheelIcon className="h-5 w-5" />}
+                  tone="accent"
+                />
+                <StatCard
+                  label={t('admin.wheel.statistics.economics.realCost', 'Реальная себестоимость')}
+                  value={formatWithCurrency(stats.economics.real_cost_kopeks / 100, 0)}
+                  icon={<GiftIcon className="h-5 w-5" />}
+                  tone="warning"
+                />
+                <StatCard
+                  label={t('admin.wheel.statistics.economics.margin', 'Чистая маржа')}
+                  value={`${formatWithCurrency(stats.economics.real_margin_kopeks / 100, 0)} · ${stats.economics.real_margin_percent.toFixed(0)}%`}
+                  icon={<WalletIcon className="h-5 w-5" />}
+                  tone={stats.economics.real_margin_kopeks >= 0 ? 'success' : 'error'}
+                />
+                <StatCard
+                  label={t('admin.wheel.statistics.economics.perSpin', 'Маржа со спина')}
+                  value={formatWithCurrency(stats.economics.margin_per_paid_spin_kopeks / 100, 1)}
+                  icon={<ChartIcon className="h-5 w-5" />}
+                  tone={stats.economics.margin_per_paid_spin_kopeks >= 0 ? 'success' : 'error'}
+                />
+              </div>
+
+              <p className="text-xs leading-relaxed text-dark-500">
+                {t(
+                  'admin.wheel.statistics.economics.note',
+                  'Призы посчитаны по себестоимости: деньги на баланс — 100% номинала, дни подписки — 50%, гигабайты — 30%. Фриспины в выручку не входят, но их призы учтены в себестоимости.',
+                )}{' '}
+                {t('admin.wheel.statistics.economics.paidRtp', 'RTP по платным спинам')}:{' '}
+                <b className="text-dark-300">{stats.economics.paid_rtp_percent.toFixed(1)}%</b>
+              </p>
+            </div>
+          )}
+
           {/* Prize distribution — shared BreakdownList (ranked bars + share %) */}
           {stats.prizes_distribution.length > 0 && (
             <BreakdownList

@@ -143,12 +143,35 @@ export interface AdminWheelConfig {
   updated_at: string | null;
 }
 
+/**
+ * Честная экономика колеса (форк-патч бота).
+ *
+ * Апстримный actual_rtp_percent считает все спины вместе (включая бесплатные,
+ * у которых выручки нет) и оценивает призы по номиналу. Здесь — раздельно и по
+ * себестоимости: деньги на баланс стоят 100% номинала, дни подписки ~50%,
+ * гигабайты ~30%.
+ */
+export interface WheelEconomics {
+  paid_spins: number;
+  free_spins: number;
+  paid_revenue_kopeks: number;
+  paid_payout_kopeks: number;
+  free_payout_kopeks: number;
+  real_cost_kopeks: number;
+  real_margin_kopeks: number;
+  real_margin_percent: number;
+  margin_per_paid_spin_kopeks: number;
+  paid_rtp_percent: number;
+}
+
 export interface WheelStatistics {
   total_spins: number;
   total_revenue_kopeks: number;
   total_payout_kopeks: number;
   actual_rtp_percent: number;
   configured_rtp_percent: number;
+  /** Есть только на нашем форке бота; на апстриме поле отсутствует. */
+  economics?: WheelEconomics | null;
   spins_by_payment_type: Record<string, { count: number; total_kopeks: number }>;
   prizes_distribution: Array<{
     prize_type: string;
