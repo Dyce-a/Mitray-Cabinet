@@ -126,6 +126,23 @@ function createHapticController(): HapticController {
   };
 }
 
+/**
+ * window.confirm-фоллбэк для `popup()`: возвращает id первой не-декоративной
+ * кнопки (не `cancel`/`close`) — ровно как это делает WebAdapter.
+ *
+ * Раньше оба фоллбэка возвращали захардкоженное `'ok'`. Вызывающий код,
+ * который сверяет результат с СОБСТВЕННЫМ id кнопки (`useDestructiveConfirm`
+ * ждёт `'confirm'`), из-за этого читал подтверждение как отказ: юзер жал «ОК»,
+ * а действие молча не выполнялось — ни запроса, ни ошибки. В Telegram Mini App
+ * это вылезало каждый раз, когда SDK-шный `showPopup` кидал исключение и
+ * управление уходило в catch.
+ */
+function confirmFallback(options: PopupOptions): string | null {
+  if (!window.confirm(options.message)) return null;
+  const button = options.buttons?.find((b) => b.type !== 'cancel' && b.type !== 'close');
+  return button?.id ?? 'ok';
+}
+
 function createDialogController(): DialogController {
   const inTelegram = isInTelegramWebApp();
 
@@ -165,7 +182,7 @@ function createDialogController(): DialogController {
 
     async popup(options: PopupOptions): Promise<string | null> {
       if (!inTelegram) {
-        return window.confirm(options.message) ? 'ok' : null;
+        return confirmFallback(options);
       }
       try {
         const buttons = options.buttons?.map((btn) => {
@@ -182,7 +199,7 @@ function createDialogController(): DialogController {
         });
         return buttonId || null;
       } catch {
-        return window.confirm(options.message) ? 'ok' : null;
+        return confirmFallback(options);
       }
     },
   };
