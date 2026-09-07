@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useRef, useEffect } from 'react';
 import { infoApi, type LanguageInfo } from '@/api/info';
+import { SUPPORTED_LANGS } from '@/i18n';
 import { ChevronDownIcon } from '@/components/icons';
 
 export default function LanguageSwitcher() {
@@ -13,7 +14,9 @@ export default function LanguageSwitcher() {
     const fetchLanguages = async () => {
       try {
         const data = await infoApi.getLanguages();
-        setAvailableLanguages(data.languages);
+        // The backend advertises every language the bot knows; offering one the
+        // cabinet has no bundle for just silently falls back to ru.
+        setAvailableLanguages(data.languages.filter((l) => SUPPORTED_LANGS.includes(l.code)));
       } catch {
         // Silently fall back to empty list — component handles it gracefully
       }

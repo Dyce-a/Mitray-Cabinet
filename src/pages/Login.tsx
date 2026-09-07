@@ -393,11 +393,6 @@ export default function Login() {
     setForgotPasswordError('');
   };
 
-  const replay = () => {
-    setPlay(false);
-    setTimeout(() => setPlay(true), 30);
-  };
-
   const rootClass = [
     'mitray-login',
     authOpen ? 'auth' : '',
@@ -438,33 +433,11 @@ export default function Login() {
         <div className="veil-auth" />
       </div>
 
-      {/* ── language switcher ── */}
-      <div className="lang-slot">
-        <LanguageSwitcher />
-      </div>
-
-      {/* ── tools ── */}
+      {/* ── tools (language + theme, one row so they stay aligned) ── */}
       <div className="tools">
-        <button
-          className="tool"
-          onClick={replay}
-          title={t('common.retry', 'Повторить')}
-          aria-label={t('common.retry', 'Повторить')}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 12a9 9 0 1 1-3-6.7" />
-            <path d="M21 4v5h-5" />
-          </svg>
-        </button>
+        <div className="lang-slot">
+          <LanguageSwitcher />
+        </div>
         <button
           className="tool"
           onClick={toggleTheme}
@@ -525,7 +498,7 @@ export default function Login() {
             {botLink && (
               <a className="btn btn-tg" href={botLink} target="_blank" rel="noopener noreferrer">
                 <TgIcon />
-                {t('auth.openInTelegram', 'Открыть в Telegram')}
+                {t('auth.openInTelegramCta')}
               </a>
             )}
             <div className="cqr-wrap" style={{ position: 'relative' }}>
@@ -541,12 +514,12 @@ export default function Login() {
                 <div style={{ background: '#fff', padding: 10, borderRadius: 12, lineHeight: 0 }}>
                   {botLink && <QRCodeSVG value={botLink} size={132} level="M" />}
                 </div>
-                <div className="qr-cap">Откройте камерой Telegram</div>
+                <div className="qr-cap">{t('auth.openQrWithTelegramCamera')}</div>
               </div>
             </div>
           </div>
           <button className="weblink reveal a2" type="button" onClick={() => setAuthOpen(true)}>
-            <span>{t('auth.openWebVersion', 'Открыть веб-версию')}</span>
+            <span>{t('auth.openWebVersion')}</span>
           </button>
         </div>
       </main>

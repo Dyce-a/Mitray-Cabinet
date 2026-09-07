@@ -10,7 +10,7 @@ const localeLoaders: Record<string, () => Promise<{ default: ResourceLanguage }>
   fa: () => import('./locales/fa.json'),
 };
 
-const SUPPORTED_LANGS = Object.keys(localeLoaders);
+export const SUPPORTED_LANGS = Object.keys(localeLoaders);
 const FALLBACK_LNG = 'ru';
 const LANGUAGE_STORAGE_KEY = 'cabinet_language';
 
@@ -47,6 +47,10 @@ i18n
 
     react: {
       useSuspense: false,
+      // Bundles are code-split and load *after* changeLanguage() resolves, so
+      // without this react-i18next never re-renders once they land and the UI
+      // stays on the fallback language until a full reload.
+      bindI18nStore: 'added',
     },
 
     showSupportNotice: false,
