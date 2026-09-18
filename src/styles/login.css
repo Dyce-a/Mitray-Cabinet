@@ -173,17 +173,23 @@
 .mitray-login .cc.ru {
   fill: var(--ruopen);
 }
-/* Perf: Russia "breathes" via a compositor-driven opacity crossfade on a twin
-   path (.ru-glow in the SVG) instead of animating `fill` — which repainted the
-   biggest path on screen every frame. Identical visual (ruopen ⇄ ruglow). */
+/* Russia "breathes" as an opacity crossfade on a twin path (.ru-glow in the SVG)
+   rather than an animated `fill` (ruopen ⇄ ruglow, identical visual). NOTE: the
+   crossfade is NOT compositor-driven, as was assumed here before — see below. */
 .mitray-login .ru-glow {
   fill: var(--ruglow);
   stroke: var(--landline);
   stroke-width: 0.8;
   vector-effect: non-scaling-stroke;
   opacity: 0;
-  will-change: opacity;
-  animation: ml-ruglow 4.5s ease-in-out infinite;
+  /* Perf: stepped, not smooth. An SVG child never gets its own compositor layer
+     (will-change: opacity does nothing here), so every frame of a smooth fade
+     repaints the largest shape on screen — this single animation was the whole
+     login jank on an iGPU-driven 2560x1440@180Hz panel: 19.4ms per frame, 5.7ms
+     with it off. Stepping it to ~3 repaints/sec keeps the breathing but stops
+     paying for it 180 times a second; the cycle is slower and the steps finer,
+     so the eye still reads a smooth swell. */
+  animation: ml-ruglow 9s steps(30) infinite;
 }
 .mitray-login .arc-base {
   fill: none;
@@ -541,12 +547,12 @@
 .mitray-login.play .bg {
   animation: ml-fadein 1.8s ease 1.3s forwards;
 }
-.mitray-login.play .b1 {
-  animation: ml-drift1 30s ease-in-out 1.3s infinite;
-}
-.mitray-login.play .b2 {
-  animation: ml-drift2 34s ease-in-out 1.5s infinite;
-}
+/* Perf: the blobs no longer drift. At ~2.7px/sec the motion was invisible, but
+   it forced the compositor to re-blend the whole stack of full-screen layers
+   (two maps, two veils, both blobs) on every single frame — with the auth card
+   open, where the map animations are already paused, killing the drift took the
+   screen from ~62fps/16.6ms to a locked 180fps/5.6ms. The ml-drift keyframes are
+   kept below in case the effect is ever wanted on a smaller surface. */
 .mitray-login.play .l1.stroke {
   animation: ml-draw 1.7s cubic-bezier(0.6, 0.04, 0.18, 1) 0.25s forwards;
 }
