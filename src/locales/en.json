@@ -2919,8 +2919,8 @@
       "subtitle": "Partner management and applications",
       "totalPartners": "Total partners",
       "pendingApplications": "Pending applications",
-      "totalReferrals": "Total referrals",
-      "totalEarnings": "Total earnings",
+      "totalReferrals": "Partners’ referrals",
+      "totalEarnings": "Earned by partners",
       "tabs": {
         "partners": "Partners",
         "applications": "Applications"

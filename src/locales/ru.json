@@ -3321,8 +3321,8 @@
       "subtitle": "Управление партнёрами и заявками",
       "totalPartners": "Всего партнёров",
       "pendingApplications": "Заявок на рассмотрении",
-      "totalReferrals": "Всего рефералов",
-      "totalEarnings": "Всего заработано",
+      "totalReferrals": "Рефералов у партнёров",
+      "totalEarnings": "Заработано партнёрами",
       "tabs": {
         "partners": "Партнёры",
         "applications": "Заявки"

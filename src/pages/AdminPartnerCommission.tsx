@@ -55,6 +55,11 @@ export default function AdminPartnerCommission() {
         <p className="mb-4 text-sm text-dark-400">
           {t('admin.partnerDetail.commissionDialog.description')}
         </p>
+        {/* Mitray: партнёр на проценте живёт на рублях, v3 его не касается */}
+        <p className="mb-4 rounded-lg bg-dark-900/50 px-3 py-2 text-xs text-dark-400">
+          Процент меняет только рубли партнёра. В рефералке v3 он не участвует, пока процент стоит;
+          вернуть в v3 — отозвать партнёрку.
+        </p>
 
         <div className="mb-2 text-sm text-dark-500">
           {t('admin.partnerDetail.commission.title')}: {currentCommission}%

@@ -13,6 +13,7 @@ import { MenuEditorTab } from '../components/admin/MenuEditorTab';
 import { ThemeTab } from '../components/admin/ThemeTab';
 import { FavoritesTab } from '../components/admin/FavoritesTab';
 import { SettingsTab } from '../components/admin/SettingsTab';
+import { MitrayReferralSettingsNote } from '../components/admin/mitray/MitrayReferralSettingsNote';
 import { SettingsTreeSidebar } from '../components/admin/SettingsTreeSidebar';
 import { SettingsMobileTabs } from '../components/admin/SettingsMobileTabs';
 import { SettingsSearchMobile, SettingsSearchResults } from '../components/admin/SettingsSearch';
@@ -198,13 +199,17 @@ export default function AdminSettings() {
       default:
         if (activeTreeInfo) {
           return (
-            <SettingsTab
-              categories={currentCategories}
-              searchQuery={searchQuery}
-              filteredSettings={filteredSettings}
-              isFavorite={isFavorite}
-              toggleFavorite={toggleFavorite}
-            />
+            <>
+              {/* Mitray: настройки REFERRAL теперь только для партнёров на проценте */}
+              {activeTreeInfo.child.id === 'users_referral' && <MitrayReferralSettingsNote />}
+              <SettingsTab
+                categories={currentCategories}
+                searchQuery={searchQuery}
+                filteredSettings={filteredSettings}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
+              />
+            </>
           );
         }
         // Unknown section — fallback to branding

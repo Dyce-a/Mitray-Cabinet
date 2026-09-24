@@ -33,6 +33,10 @@ export default function AdminPartnerRevoke() {
       <div className="rounded-xl border border-error-500/30 bg-dark-800 p-6">
         <div className="mb-6 rounded-lg bg-error-500/10 p-4">
           <p className="text-dark-400">{t('admin.partnerDetail.revokeDialog.description')}</p>
+          {/* Mitray: отзыв обнуляет личный процент — человек возвращается в v3 */}
+          <p className="mt-2 text-sm text-dark-400">
+            После отзыва человек вернётся в рефералку v3: за новые оплаты корешей — дни, а не рубли.
+          </p>
         </div>
 
         <div className="flex gap-3">
