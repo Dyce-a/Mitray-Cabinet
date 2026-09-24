@@ -72,7 +72,8 @@ const Subscription = lazyWithRetry(() => import('./pages/Subscription'));
 const SubscriptionPurchase = lazyWithRetry(() => import('./pages/SubscriptionPurchase'));
 const Balance = lazyWithRetry(() => import('./pages/Balance'));
 const SavedCards = lazyWithRetry(() => import('./pages/SavedCards'));
-const Referral = lazyWithRetry(() => import('./pages/Referral'));
+// Mitray: «Кореша» (рефералка v3), если включена; иначе старая страница
+const Referral = lazyWithRetry(() => import('./pages/ReferralSwitch'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
 const Contests = lazyWithRetry(() => import('./pages/Contests'));

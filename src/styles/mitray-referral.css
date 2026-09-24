@@ -1,0 +1,1377 @@
+/* ============================================================================
+   Mitray VPN — «Кореша», рефералка v3. Порт design-lab/referrals-v3.html.
+   Скоуп .mitray-kor; цвета — токены приложения (.light ремапит), остальное
+   как в прототипе. Сезон и неделя ×2 не перенесены: под них ещё нет бэкенда.
+   ========================================================================== */
+
+.mitray-kor {
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel2: rgba(255, 255, 255, 0.05);
+  --bg2: #101019;
+  --ink: rgb(var(--color-dark-50));
+  --muted: rgb(var(--color-dark-400));
+  --faint: #5c6075;
+  --accent: rgb(var(--color-accent-400));
+  --accent2: #63e6e2;
+  --green: #3ce382;
+  --warn: #ffb54a;
+  --danger: #ff6b6b;
+  --gold: #ffce5c;
+  --tg: #2aabee;
+  --tg-ink: #ffffff;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.13);
+  --pill-ink: rgb(var(--color-dark-950));
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  color: var(--ink);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.light .mitray-kor {
+  --panel: rgba(20, 20, 45, 0.03);
+  --panel2: rgba(20, 20, 45, 0.05);
+  --bg2: #f5f6fc;
+  --faint: #8a8ea3;
+  --accent2: #15b8cb;
+  --green: #10a455;
+  --warn: #d98314;
+  --danger: #e0445b;
+  --gold: #c68a0e;
+  --line: rgba(20, 20, 45, 0.1);
+  --line2: rgba(20, 20, 45, 0.16);
+}
+.mitray-kor button,
+.mitray-kor input {
+  font-family: inherit;
+  color: inherit;
+}
+.mitray-kor .sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.mitray-kor .phead {
+  padding: 2px 0 20px;
+}
+.mitray-kor .phead h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  text-wrap: balance;
+}
+
+/* появление: из видимого состояния, без ожидания скриптов */
+.mitray-kor .rv {
+  animation: kor-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes kor-rise {
+  from {
+    opacity: 0.3;
+    transform: translateY(12px);
+  }
+}
+
+.mitray-kor .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+  min-width: 0;
+  box-shadow: none;
+}
+.mitray-kor .card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.mitray-kor .card-h .t {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.mitray-kor .card-h .t svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.mitray-kor .card-h .sub {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+.mitray-kor .note {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.mitray-kor .note b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.mitray-kor .mt {
+  margin-top: 14px;
+}
+
+.mitray-kor .cta {
+  height: 46px;
+  padding: 0 22px;
+  flex: none;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font:
+    700 14.5px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  color: var(--pill-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  box-shadow: 0 12px 30px -12px var(--accent);
+  transition:
+    transform 0.25s,
+    opacity 0.2s;
+}
+.mitray-kor .cta:hover {
+  transform: translateY(-2px);
+}
+.mitray-kor .cta:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+.mitray-kor .sbtn {
+  height: 36px;
+  padding: 0 12px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font:
+    600 12.5px 'Space Grotesk',
+    system-ui,
+    sans-serif;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+.mitray-kor .sbtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mitray-kor .sbtn.done {
+  color: var(--green);
+  border-color: var(--green);
+}
+.mitray-kor .sbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  color: var(--muted);
+  border-color: var(--line2);
+}
+
+/* ── герой: сколько корешей платит и сколько до бесплатного VPN ─────────── */
+.mitray-kor .hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 26px 28px;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 20%, var(--panel)),
+    var(--panel) 62%
+  );
+  box-shadow: 0 16px 50px -34px var(--accent);
+}
+.mitray-kor .hero.free {
+  border-color: color-mix(in srgb, var(--green) 34%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--green) 15%, var(--panel)),
+    var(--panel) 62%
+  );
+  box-shadow: 0 16px 50px -34px var(--green);
+}
+.mitray-kor .hero-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px 28px;
+  flex-wrap: wrap;
+}
+.mitray-kor .hero-main {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.mitray-kor .kick {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mitray-kor .kick b {
+  color: var(--ink);
+  font-weight: 700;
+}
+.mitray-kor .hero-title {
+  margin-top: 10px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  display: flex;
+  align-items: baseline;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+}
+.mitray-kor .hero-title .num {
+  font-size: 54px;
+  letter-spacing: -2px;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-kor .hero-title .of {
+  font-size: 26px;
+  color: var(--muted);
+}
+.mitray-kor .hero-title .acc {
+  color: var(--green);
+}
+.mitray-kor .hero-until {
+  flex: none;
+  text-align: right;
+}
+.mitray-kor .hero-until .d {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-kor .hero-until .d.flash {
+  animation: kor-flash 1.1s ease;
+}
+@keyframes kor-flash {
+  0% {
+    color: var(--green);
+    transform: scale(1.08);
+  }
+  100% {
+    color: var(--ink);
+    transform: none;
+  }
+}
+.mitray-kor .hero-until .s {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.mitray-kor .slots {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0 18px;
+}
+.mitray-kor .slot {
+  min-width: 0;
+}
+.mitray-kor .slot .bar {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px dashed var(--line2);
+  overflow: hidden;
+}
+.mitray-kor .slot.on .bar {
+  border: 1px solid transparent;
+}
+.mitray-kor .slot .bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  box-shadow: 0 0 18px -4px var(--accent);
+  animation: kor-fill 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.14s + 0.15s);
+}
+.mitray-kor .slot.extra .bar i {
+  background: linear-gradient(
+    90deg,
+    var(--green),
+    color-mix(in srgb, var(--green) 45%, var(--accent2))
+  );
+  box-shadow: 0 0 18px -4px var(--green);
+}
+@keyframes kor-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+.mitray-kor .slot .lb {
+  margin-top: 9px;
+}
+.mitray-kor .slot .lb b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-kor .slot .lb span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-kor .slot.vacant .lb b {
+  color: var(--faint);
+  font-weight: 500;
+}
+.mitray-kor .slot.extra .lb span {
+  color: var(--green);
+}
+/* тарифу дороже нужно больше корешей: восемь подписей в ряд не влезают */
+.mitray-kor .slots.dense {
+  gap: 6px;
+}
+.mitray-kor .slots.dense .slot.vacant .lb span {
+  display: none;
+}
+.mitray-kor .hero-goal {
+  display: flex;
+  align-items: center;
+  gap: 14px 20px;
+  flex-wrap: wrap;
+}
+.mitray-kor .hero-goal p {
+  flex: 1 1 300px;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.mitray-kor .hero-goal p b {
+  color: var(--accent);
+}
+.mitray-kor .hero.free .hero-goal p b {
+  color: var(--green);
+}
+
+/* ── раскладка: на десктопе две колонки, на телефоне одна с приоритетами ── */
+.mitray-kor .ref-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.mitray-kor .ref-grid > .rstats,
+.mitray-kor .ref-grid > .steps {
+  grid-column: 1 / -1;
+}
+.mitray-kor .col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ── статы ─────────────────────────────────────────────────────────────── */
+.mitray-kor .rstats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.mitray-kor .rstat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 22px;
+  min-width: 0;
+}
+.mitray-kor .rstat .ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.mitray-kor .rstat .v {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mitray-kor .rstat .v.acc {
+  color: var(--accent);
+}
+.mitray-kor .rstat .v.green {
+  color: var(--green);
+}
+.mitray-kor .rstat .sub {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* ── как это работает ──────────────────────────────────────────────────── */
+.mitray-kor .steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+}
+.mitray-kor .stp {
+  padding: 22px 22px 20px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mitray-kor .stp + .stp {
+  border-left: 1px solid var(--line);
+}
+.mitray-kor .stp .n {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.mitray-kor .stp b {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.mitray-kor .stp p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.mitray-kor .stp p em {
+  font-style: normal;
+  color: var(--ink);
+  font-weight: 600;
+}
+.mitray-kor .stp .f {
+  margin-top: auto;
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font: 600 12px var(--mono);
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+/* ── награды, которые забирают руками (сгорают через 14 дней) ──────────── */
+.mitray-kor .claim {
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.mitray-kor .cbadge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pill-ink);
+  background: var(--accent);
+}
+.mitray-kor .claim-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mitray-kor .claim-row:last-child {
+  border-bottom: none;
+}
+.mitray-kor .claim-row .ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.mitray-kor .claim-row .ic.gold {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold);
+}
+.mitray-kor .claim-row .ic svg {
+  width: 19px;
+  height: 19px;
+}
+.mitray-kor .claim-row .u {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-kor .claim-row .u b {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-kor .claim-row .u p {
+  color: var(--faint);
+  font-size: 11.5px;
+  margin-top: 2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.mitray-kor .claim-row .act {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.mitray-kor .claim-row .left {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.mitray-kor .claim-row .left svg {
+  width: 12px;
+  height: 12px;
+}
+.mitray-kor .claim-row .left.hot {
+  color: var(--warn);
+}
+.mitray-kor .take {
+  height: 34px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 48%, var(--accent2))
+  );
+  transition: transform 0.2s;
+}
+.mitray-kor .take:hover {
+  transform: translateY(-1px);
+}
+.mitray-kor .take:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+.mitray-kor .claim-row.taken .take {
+  opacity: 1;
+  background: none;
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+.mitray-kor .claim-row.taken .u,
+.mitray-kor .claim-row.taken .ic {
+  opacity: 0.5;
+}
+.mitray-kor .claim-row.pending .ic {
+  background: var(--panel2);
+  color: var(--faint);
+}
+.mitray-kor .claim-row.pending .u b {
+  color: var(--muted);
+}
+.mitray-kor .claim-row.pending .take {
+  opacity: 1;
+  background: none;
+  border: 1px solid var(--line2);
+  color: var(--faint);
+}
+.mitray-kor .capnote {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--gold) 10%, var(--panel2));
+  border: 1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+}
+.mitray-kor .capnote svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--gold);
+}
+.mitray-kor .capnote b {
+  color: var(--gold);
+}
+
+/* ── ссылка и код ──────────────────────────────────────────────────────── */
+.mitray-kor .codebox {
+  padding: 16px 18px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel2));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.mitray-kor .codebox .top {
+  display: flex;
+  align-items: center;
+  gap: 12px 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.mitray-kor .cells {
+  display: flex;
+  gap: 6px;
+}
+.mitray-kor .cells span {
+  width: 36px;
+  height: 44px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font: 700 21px var(--mono);
+  color: var(--ink);
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+}
+.mitray-kor .codebox .sbtn {
+  margin-left: auto;
+}
+.mitray-kor .codebox .note {
+  margin-top: 10px;
+}
+.mitray-kor .lrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.mitray-kor .lrow .ic {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.mitray-kor .lrow .u {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-kor .lrow .u b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.mitray-kor .lrow .u .url {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+.mitray-kor .msg {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+.mitray-kor .msg .k {
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.mitray-kor .msg .mtxt {
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.mitray-kor .msg .acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.mitray-kor .btn-tg {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tg-ink);
+  background: var(--tg);
+  transition: transform 0.2s;
+  white-space: nowrap;
+}
+.mitray-kor .btn-tg:hover {
+  transform: translateY(-1px);
+}
+.mitray-kor .ping {
+  animation: kor-ping 1.2s ease-out;
+}
+@keyframes kor-ping {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+
+/* ── список корешей ────────────────────────────────────────────────────── */
+.mitray-kor .rr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mitray-kor .rr:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.mitray-kor .rr .ava {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.mitray-kor .rr.off .ava {
+  background: var(--panel2);
+  color: var(--faint);
+}
+.mitray-kor .rr .nm {
+  flex: 1;
+  min-width: 0;
+}
+.mitray-kor .rr .nm b {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mitray-kor .rr .nm p {
+  color: var(--faint);
+  font-size: 11.5px;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.mitray-kor .st {
+  flex: none;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.mitray-kor .st.green {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.mitray-kor .st.acc {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.mitray-kor .st.grey {
+  color: var(--faint);
+  background: var(--panel2);
+}
+.mitray-kor .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 10px 8px 4px;
+}
+.mitray-kor .empty .ic {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--panel2);
+  border: 1px dashed var(--line2);
+  color: var(--faint);
+}
+.mitray-kor .empty b {
+  font-size: 14.5px;
+}
+.mitray-kor .empty p {
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mitray-kor .more {
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line2);
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mitray-kor .more:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── код кореша (виден только до первой оплаты и без пригласившего) ────── */
+.mitray-kor .codein {
+  border-color: color-mix(in srgb, var(--accent2) 30%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent2) 10%, var(--panel)),
+    var(--panel) 65%
+  );
+}
+.mitray-kor .codein .card-h .t svg {
+  color: var(--accent2);
+}
+.mitray-kor .cin-t {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.mitray-kor .cin-t b {
+  color: var(--ink);
+}
+.mitray-kor .cin {
+  display: flex;
+  gap: 10px;
+}
+.mitray-kor .cin input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 13px;
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  font: 700 20px var(--mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.mitray-kor .cin input::placeholder {
+  color: var(--faint);
+}
+.mitray-kor .cin input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.mitray-kor .cin input:disabled {
+  opacity: 0.7;
+}
+.mitray-kor .cin .cta {
+  height: 48px;
+  padding: 0 18px;
+}
+.mitray-kor .cin-msg {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.mitray-kor .cin-msg.ok {
+  color: var(--green);
+}
+.mitray-kor .cin-msg.err {
+  color: var(--danger);
+}
+
+/* ── вехи ──────────────────────────────────────────────────────────────── */
+.mitray-kor .road {
+  position: relative;
+  margin: 2px 0 18px;
+}
+.mitray-kor .road .track {
+  position: absolute;
+  left: 0;
+  width: 87.5%;
+  top: 17px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line2);
+}
+.mitray-kor .road .track i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--p, 0%);
+  border-radius: inherit;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  animation: kor-fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.2s;
+}
+.mitray-kor .stops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mitray-kor .stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.mitray-kor .stop .dot {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  color: var(--faint);
+}
+.mitray-kor .stop.done .dot {
+  background: color-mix(in srgb, var(--green) 18%, var(--bg2));
+  border-color: color-mix(in srgb, var(--green) 44%, transparent);
+  color: var(--green);
+}
+.mitray-kor .stop.next .dot {
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+  border-color: transparent;
+  color: var(--pill-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.mitray-kor .stop b {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mitray-kor .stop.locked b {
+  color: var(--muted);
+}
+.mitray-kor .stop small {
+  margin-top: 3px;
+  min-height: 15px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.mitray-kor .stop.next small {
+  color: var(--accent);
+  font-weight: 600;
+}
+.mitray-kor .stop.done small {
+  color: var(--green);
+}
+.mitray-kor .road-sum {
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.mitray-kor .road-sum b {
+  color: var(--accent);
+}
+
+/* ── сколько получишь: как награда растёт с числом платящих корешей ────── */
+.mitray-kor .lad-intro {
+  margin: -8px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mitray-kor .lad {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mitray-kor .lad-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+.mitray-kor .lad-row .cnt {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.mitray-kor .lad-row .tx {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+.mitray-kor .lad-row .tx b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.mitray-kor .lad-row .tx p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.mitray-kor .lad-row .ms {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+.mitray-kor .lad-row .ms svg {
+  width: 12px;
+  height: 12px;
+}
+.mitray-kor .lad-row.passed .cnt {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  border-color: color-mix(in srgb, var(--green) 34%, transparent);
+}
+.mitray-kor .lad-row.here {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.mitray-kor .lad-row.here .cnt {
+  color: var(--pill-ink);
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+}
+.mitray-kor .here-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* ── партнёрка (для блогеров, отдельные условия) ───────────────────────── */
+.mitray-kor .partner {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 16%, var(--panel)),
+    var(--panel)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.mitray-kor .partner .ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  color: var(--pill-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, var(--accent2))
+  );
+}
+.mitray-kor .partner > b {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+}
+.mitray-kor .partner p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.mitray-kor .partner .sbtn {
+  margin-top: 14px;
+}
+
+@media (max-width: 980px) {
+  .mitray-kor .ref-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .mitray-kor .col {
+    display: contents;
+  }
+  .mitray-kor .o-codein {
+    order: 1;
+  }
+  .mitray-kor .o-claim {
+    order: 2;
+  }
+  .mitray-kor .o-link {
+    order: 3;
+  }
+  .mitray-kor .o-stats {
+    order: 4;
+  }
+  .mitray-kor .o-steps {
+    order: 5;
+  }
+  .mitray-kor .o-ladder {
+    order: 6;
+  }
+  .mitray-kor .o-road {
+    order: 7;
+  }
+  .mitray-kor .o-friends {
+    order: 8;
+  }
+  .mitray-kor .o-partner {
+    order: 10;
+  }
+  .mitray-kor .hero {
+    margin-bottom: 14px;
+  }
+}
+@media (max-width: 760px) {
+  .mitray-kor .steps {
+    grid-template-columns: 1fr;
+  }
+  .mitray-kor .stp {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 6px 12px;
+    padding: 18px;
+  }
+  .mitray-kor .stp .n {
+    grid-row: 1 / span 3;
+    align-self: start;
+  }
+  .mitray-kor .stp b {
+    margin-top: 5px;
+  }
+  .mitray-kor .stp .f {
+    margin-top: 4px;
+    justify-self: start;
+  }
+  .mitray-kor .stp + .stp {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+}
+@media (max-width: 680px) {
+  .mitray-kor .phead {
+    padding-bottom: 16px;
+  }
+  .mitray-kor .phead h1 {
+    font-size: 24px;
+  }
+  .mitray-kor .hero {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+  .mitray-kor .hero-until {
+    text-align: left;
+  }
+  .mitray-kor .hero-title .num {
+    font-size: 46px;
+  }
+  .mitray-kor .hero-title,
+  .mitray-kor .hero-title .of {
+    font-size: 22px;
+  }
+  .mitray-kor .rstats {
+    gap: 10px;
+  }
+  .mitray-kor .rstat {
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .mitray-kor .rstat .v {
+    font-size: 22px;
+  }
+  .mitray-kor .rstat .ic {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 10px;
+  }
+  .mitray-kor .rstat .ic svg {
+    width: 17px;
+    height: 17px;
+  }
+  .mitray-kor .rstat .sub {
+    font-size: 11.5px;
+  }
+}
+@media (max-width: 560px) {
+  .mitray-kor .card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+  .mitray-kor .codebox {
+    padding: 14px;
+  }
+  .mitray-kor .cells {
+    gap: 5px;
+  }
+  .mitray-kor .cells span {
+    width: 32px;
+    height: 40px;
+    font-size: 19px;
+  }
+  .mitray-kor .codebox .sbtn {
+    padding: 0 10px;
+  }
+  .mitray-kor .codebox .sbtn span {
+    display: none;
+  }
+  .mitray-kor .card-h .sub {
+    display: none;
+  }
+  .mitray-kor .hero-goal .cta {
+    width: 100%;
+  }
+  .mitray-kor .cin .cta {
+    padding: 0 14px;
+  }
+  .mitray-kor .lrow {
+    padding: 12px;
+  }
+  /* восемь подписей в ряд на телефоне — сплошные «Ди…»: остаются полоски */
+  .mitray-kor .slots.dense .lb {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  .mitray-kor .cells span {
+    width: 30px;
+    height: 38px;
+    font-size: 18px;
+  }
+  .mitray-kor .stop b {
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mitray-kor *,
+  .mitray-kor {
+    animation: none !important;
+    transition-duration: 0.001s !important;
+  }
+}
