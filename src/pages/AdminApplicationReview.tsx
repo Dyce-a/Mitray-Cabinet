@@ -158,6 +158,10 @@ export default function AdminApplicationReview() {
           <p className="mb-4 text-sm text-dark-400">
             {t('admin.partners.approveDialog.description', { name: displayName })}
           </p>
+          {/* Mitray: личный процент выводит человека из рефералки v3 */}
+          <p className="mb-4 rounded-lg bg-warning-500/10 px-3 py-2 text-xs text-warning-400">
+            Партнёр получает рубли по проценту. Рефералка v3 (дни за корешей) для него выключится.
+          </p>
           <label className="mb-1 block text-sm font-medium text-dark-300">
             {t('admin.partners.approveDialog.commissionLabel')}
           </label>

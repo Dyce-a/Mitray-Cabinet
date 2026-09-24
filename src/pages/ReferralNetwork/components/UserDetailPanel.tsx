@@ -4,6 +4,7 @@ import { referralNetworkApi } from '@/api/referralNetwork';
 import { CloseIcon } from '@/components/icons';
 import { useReferralNetworkStore } from '@/store/referralNetwork';
 import { formatKopeksToRubles, getSubscriptionStatusColor } from '../utils';
+import { MitrayNetworkEarnings } from '@/components/admin/mitray/MitrayNetworkEarnings';
 
 interface UserDetailPanelProps {
   userId: number;
@@ -141,14 +142,8 @@ export function UserDetailPanel({ userId, className }: UserDetailPanelProps) {
                     {formatKopeksToRubles(user.personal_spent_kopeks)} ₽
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-dark-400">
-                    {t('admin.referralNetwork.user.referralEarnings')}
-                  </span>
-                  <span className="font-mono text-accent-400">
-                    {formatKopeksToRubles(user.personal_revenue_kopeks)} ₽
-                  </span>
-                </div>
+                {/* Mitray: дни v3 вместо рублёвого заработка (рубли — только у партнёра) */}
+                <MitrayNetworkEarnings userId={user.id} />
               </div>
             </div>
 

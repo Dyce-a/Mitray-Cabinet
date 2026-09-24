@@ -10,6 +10,8 @@ import type {
 } from '../../../api/adminUsers';
 import type { PromoGroup } from '../../../api/promocodes';
 import { ServerIcon } from '@/components/icons';
+import { formatDays } from '../../../api/adminMitrayReferral';
+import { useAdminMitrayUser } from './useAdminMitrayUser';
 
 // ──────────────────────────────────────────────────────────────────
 // Local status badge (parent has its own — duplicating here to keep
@@ -123,6 +125,8 @@ export function InfoTab(props: InfoTabProps) {
     onDisableUser,
     onFullDeleteUser,
   } = props;
+  // Mitray: дни рефералки v3 для блока реферальной программы
+  const mitrayQuery = useAdminMitrayUser(user);
 
   return (
     <div className="space-y-4">
@@ -356,12 +360,22 @@ export function InfoTab(props: InfoTabProps) {
               {t('admin.users.detail.referral.referrals')}
             </div>
           </div>
-          <div>
-            <div className="text-lg font-bold text-dark-100">
-              {formatWithCurrency(user.referral.total_earnings_kopeks / 100)}
+          {/* Mitray: участнику v3 — дни, партнёру на личном проценте — рубли */}
+          {user.referral.commission_percent != null ? (
+            <div>
+              <div className="text-lg font-bold text-dark-100">
+                {formatWithCurrency(user.referral.total_earnings_kopeks / 100)}
+              </div>
+              <div className="text-xs text-dark-500">{t('admin.users.detail.referral.earned')}</div>
             </div>
-            <div className="text-xs text-dark-500">{t('admin.users.detail.referral.earned')}</div>
-          </div>
+          ) : (
+            <div>
+              <div className="text-lg font-bold text-dark-100">
+                {mitrayQuery.data?.days ? formatDays(mitrayQuery.data.days.earned) : '—'}
+              </div>
+              <div className="text-xs text-dark-500">Дней по v3</div>
+            </div>
+          )}
           <div>
             {editingReferralCommission ? (
               <div className="space-y-1">
@@ -375,6 +389,9 @@ export function InfoTab(props: InfoTabProps) {
                   max={100}
                   disabled={actionLoading}
                 />
+                <div className="text-[10px] leading-tight text-warning-400">
+                  Процент — партнёр на рублях, v3 выключится. Пусто — вернуть в v3
+                </div>
                 <button
                   onClick={onUpdateReferralCommission}
                   disabled={actionLoading}
@@ -388,10 +405,10 @@ export function InfoTab(props: InfoTabProps) {
                 <div className="text-lg font-bold text-dark-100">
                   {user.referral.commission_percent != null
                     ? `${user.referral.commission_percent}%`
-                    : t('admin.users.detail.referral.default')}
+                    : 'v3'}
                 </div>
                 <div className="text-xs text-dark-500">
-                  {t('admin.users.detail.referral.commission')}
+                  {user.referral.commission_percent != null ? 'Партнёр на ₽' : 'Схема: дни'}
                 </div>
               </>
             )}

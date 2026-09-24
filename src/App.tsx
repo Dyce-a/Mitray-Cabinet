@@ -165,6 +165,8 @@ const AdminLandings = lazyWithRetry(() => import('./pages/AdminLandings'));
 const AdminLandingEditor = lazyWithRetry(() => import('./pages/AdminLandingEditor'));
 const AdminLandingStats = lazyWithRetry(() => import('./pages/AdminLandingStats'));
 const AdminReferralNetwork = lazyWithRetry(() => import('./pages/ReferralNetwork'));
+// Mitray: админка рефералки v3
+const AdminMitrayReferral = lazyWithRetry(() => import('./pages/AdminMitrayReferral'));
 
 // News pages
 const NewsArticlePage = lazyWithRetry(() => import('./pages/NewsArticle'));
@@ -1081,6 +1083,16 @@ function App() {
             <PermissionRoute permission="sales_stats:read">
               <LazyPage>
                 <AdminSalesStats />
+              </LazyPage>
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="/admin/mitray-referral"
+          element={
+            <PermissionRoute permission="stats:read">
+              <LazyPage>
+                <AdminMitrayReferral />
               </LazyPage>
             </PermissionRoute>
           }

@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { useCurrency } from '../../../hooks/useCurrency';
 import { useNotify } from '../../../platform/hooks/useNotify';
 import { adminUsersApi, type UserDetailResponse, type UserListItem } from '../../../api/adminUsers';
-import { StatCard } from '@/components/stats';
-import { BanknotesIcon, PercentIcon, TagIcon, UsersIcon, XIcon } from '@/components/icons';
+import { XIcon } from '@/components/icons';
+import { activeSummary } from '../../../api/adminMitrayReferral';
+import { MitrayRefereeBadge, MitrayReferralSection } from './MitrayReferralSection';
+import { useAdminMitrayUser } from './useAdminMitrayUser';
 
 // ──────────────────────────────────────────────────────────────────
 // Referrals tab — top-of-graph referrer + stats + referrals list,
@@ -22,7 +23,6 @@ export interface ReferralsTabProps {
 
 export function ReferralsTab({ user, userId, onUserRefresh }: ReferralsTabProps) {
   const { t } = useTranslation();
-  const { formatWithCurrency } = useCurrency();
   const navigate = useNavigate();
   const notify = useNotify();
 
@@ -35,6 +35,11 @@ export function ReferralsTab({ user, userId, onUserRefresh }: ReferralsTabProps)
   const referralsList = referralsListQuery.data?.users ?? [];
   const referralsTotal = referralsListQuery.data?.total ?? 0;
   const referralsListLoading = referralsListQuery.isFetching;
+  // Mitray: статусы корешей в v3 (платит / ждём устройство / ...) для строк списка
+  const mitrayQuery = useAdminMitrayUser(user);
+  const mitrayReferees = new Map(
+    (activeSummary(mitrayQuery.data)?.referees ?? []).map((referee) => [referee.id, referee]),
+  );
 
   // Action gating — local so other tabs' buttons aren't dimmed during a
   // referral mutation here.
@@ -326,38 +331,8 @@ export function ReferralsTab({ user, userId, onUserRefresh }: ReferralsTabProps)
         )}
       </div>
 
-      {/* Section 2: Referral stats */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label={t('admin.users.detail.referrals.totalReferrals')}
-          value={user.referral.referrals_count}
-          icon={<UsersIcon className="h-5 w-5" />}
-          tone="neutral"
-        />
-        <StatCard
-          label={t('admin.users.detail.referrals.totalEarnings')}
-          value={formatWithCurrency(user.referral.total_earnings_kopeks / 100)}
-          icon={<BanknotesIcon className="h-5 w-5" />}
-          tone="neutral"
-        />
-        <StatCard
-          label={t('admin.users.detail.referrals.commission')}
-          value={
-            user.referral.commission_percent != null
-              ? `${user.referral.commission_percent}%`
-              : t('admin.users.detail.referrals.default')
-          }
-          icon={<PercentIcon className="h-5 w-5" />}
-          tone="neutral"
-        />
-        <StatCard
-          label={t('admin.users.detail.referrals.referralCode')}
-          value={user.referral.referral_code}
-          icon={<TagIcon className="h-5 w-5" />}
-          tone="neutral"
-          valueClassName="font-mono"
-        />
-      </div>
+      {/* Mitray: рефералка v3 днями; рубли — только у партнёра на личном проценте */}
+      <MitrayReferralSection user={user} />
 
       {/* Section 3: Referrals list */}
       <div className="rounded-2xl border border-dark-700/30 bg-dark-800/40 p-5">
@@ -472,14 +447,17 @@ export function ReferralsTab({ user, userId, onUserRefresh }: ReferralsTabProps)
                     </div>
                   </div>
                 </button>
-                <button
-                  onClick={() => handleRemoveReferral(ref.id)}
-                  disabled={actionLoading}
-                  className="shrink-0 rounded-lg p-2 text-dark-500 transition-colors hover:bg-error-500/10 hover:text-error-400 disabled:opacity-50"
-                  title={t('admin.users.detail.referrals.removeReferral')}
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <MitrayRefereeBadge referee={mitrayReferees.get(ref.id)} />
+                  <button
+                    onClick={() => handleRemoveReferral(ref.id)}
+                    disabled={actionLoading}
+                    className="shrink-0 rounded-lg p-2 text-dark-500 transition-colors hover:bg-error-500/10 hover:text-error-400 disabled:opacity-50"
+                    title={t('admin.users.detail.referrals.removeReferral')}
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

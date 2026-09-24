@@ -10,6 +10,7 @@ import { useCurrency } from '../hooks/useCurrency';
 import { usePlatform } from '../platform/hooks/usePlatform';
 
 import { StatCard } from '@/components/stats';
+import { MitrayDashboardReferrers } from '@/components/admin/mitray/MitrayDashboardReferrers';
 import {
   BackIcon,
   BanknotesIcon,
@@ -29,7 +30,6 @@ import {
   SparklesIcon,
   StarIcon,
   TagIcon,
-  UsersIcon,
   UsersOnlineIcon,
   WalletIcon,
   XCircleIcon,
@@ -203,7 +203,6 @@ export default function AdminDashboard() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showAllNodes, setShowAllNodes] = useState(false);
-  const [referrersTab, setReferrersTab] = useState<'earnings' | 'invited'>('earnings');
 
   // Data fetching via React Query: caching, dedupe, and auto-refetch every 30s
   // (replaces the manual setInterval + useState + console.error pattern).
@@ -219,17 +218,15 @@ export default function AdminDashboard() {
   const extendedQuery = useQuery({
     queryKey: ['admin-dashboard-extended'] as const,
     queryFn: async () => {
-      const [topReferrers, topCampaigns, recentPayments, sysInfo] = await Promise.all([
-        statsApi.getTopReferrers(10),
+      const [topCampaigns, recentPayments, sysInfo] = await Promise.all([
         statsApi.getTopCampaigns(10),
         statsApi.getRecentPayments(20),
         statsApi.getSystemInfo(),
       ]);
-      return { topReferrers, topCampaigns, recentPayments, sysInfo };
+      return { topCampaigns, recentPayments, sysInfo };
     },
     refetchInterval: 30_000,
   });
-  const referrers = extendedQuery.data?.topReferrers ?? null;
   const campaigns = extendedQuery.data?.topCampaigns ?? null;
   const payments = extendedQuery.data?.recentPayments ?? null;
   const systemInfo = extendedQuery.data?.sysInfo ?? null;
@@ -596,136 +593,8 @@ export default function AdminDashboard() {
 
       {/* Extended Stats Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Top Referrers */}
-        {referrers && (referrers.by_earnings.length > 0 || referrers.by_invited.length > 0) && (
-          <div className="rounded-xl border border-dark-700 bg-dark-800/30 p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="rounded-lg bg-accent-500/20 p-2 text-accent-400 sm:p-2.5">
-                  <UsersIcon />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-dark-100 sm:text-lg">
-                    {t('adminDashboard.topReferrers.title')}
-                  </h2>
-                  <p className="text-xs text-dark-400 sm:text-sm">
-                    {referrers.total_referrers}{' '}
-                    {t('adminDashboard.topReferrers.stats', { count: referrers.total_referrals })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="mb-4 flex gap-2">
-              <button
-                onClick={() => setReferrersTab('earnings')}
-                className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
-                  referrersTab === 'earnings'
-                    ? 'bg-accent-500/20 text-accent-400'
-                    : 'bg-dark-700/50 text-dark-400 hover:text-dark-200'
-                }`}
-              >
-                {t('adminDashboard.topReferrers.byEarnings')}
-              </button>
-              <button
-                onClick={() => setReferrersTab('invited')}
-                className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
-                  referrersTab === 'invited'
-                    ? 'bg-accent-500/20 text-accent-400'
-                    : 'bg-dark-700/50 text-dark-400 hover:text-dark-200'
-                }`}
-              >
-                {t('adminDashboard.topReferrers.byInvited')}
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {(referrersTab === 'earnings' ? referrers.by_earnings : referrers.by_invited)
-                .slice(0, 5)
-                .map((ref, idx) => (
-                  <div
-                    key={ref.user_id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-dark-900/50 p-2 transition-colors hover:bg-dark-800/50 sm:p-3"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-dark-700 text-[10px] font-bold text-dark-300 sm:h-6 sm:w-6 sm:text-xs">
-                        {idx + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-medium text-dark-100 sm:text-sm">
-                          {ref.display_name}
-                        </div>
-                        {ref.username && (
-                          <div className="truncate text-[10px] text-dark-500 sm:text-xs">
-                            @{ref.username}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      {referrersTab === 'earnings' ? (
-                        <>
-                          <div className="text-xs font-semibold text-success-400 sm:text-sm">
-                            {formatAmount(ref.earnings_total_kopeks / 100)} {currencySymbol}
-                          </div>
-                          <div className="text-[10px] text-dark-500 sm:text-xs">
-                            {ref.invited_count} {t('adminDashboard.topReferrers.invites')}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-xs font-semibold text-accent-400 sm:text-sm">
-                            {ref.invited_count} {t('adminDashboard.topReferrers.people')}
-                          </div>
-                          <div className="text-[10px] text-dark-500 sm:text-xs">
-                            {formatAmount(ref.earnings_total_kopeks / 100)} {currencySymbol}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            {/* Period Stats */}
-            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-dark-700 pt-4 sm:gap-3">
-              <StatCard
-                label={t('adminDashboard.period.today')}
-                value={`${formatAmount(
-                  (referrersTab === 'earnings'
-                    ? referrers.by_earnings
-                    : referrers.by_invited
-                  ).reduce((sum, r) => sum + r.earnings_today_kopeks, 0) / 100,
-                )} ${currencySymbol}`}
-                icon={<ClockIcon className="h-5 w-5" />}
-                tone="neutral"
-              />
-              <StatCard
-                label={t('adminDashboard.period.week')}
-                value={`${formatAmount(
-                  (referrersTab === 'earnings'
-                    ? referrers.by_earnings
-                    : referrers.by_invited
-                  ).reduce((sum, r) => sum + r.earnings_week_kopeks, 0) / 100,
-                )} ${currencySymbol}`}
-                icon={<CalendarBlankIcon className="h-5 w-5" />}
-                tone="neutral"
-              />
-              <StatCard
-                label={t('adminDashboard.period.month')}
-                value={`${formatAmount(
-                  (referrersTab === 'earnings'
-                    ? referrers.by_earnings
-                    : referrers.by_invited
-                  ).reduce((sum, r) => sum + r.earnings_month_kopeks, 0) / 100,
-                )} ${currencySymbol}`}
-                icon={<CalendarIcon className="h-5 w-5" />}
-                tone="neutral"
-              />
-            </div>
-          </div>
-        )}
+        {/* Mitray: рефералка v3 днями вместо рублёвого топа рефереров */}
+        <MitrayDashboardReferrers />
 
         {/* Top Campaigns */}
         {campaigns && campaigns.campaigns.length > 0 && (

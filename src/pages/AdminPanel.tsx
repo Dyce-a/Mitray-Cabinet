@@ -239,6 +239,13 @@ const sections: AdminSection[] = [
         permission: 'pinned_messages:read',
       },
       { name: 'admin.nav.wheel', icon: 'circle-dot', to: '/admin/wheel', permission: 'wheel:read' },
+      // Mitray: рефералка v3 «Кореша»
+      {
+        name: 'admin.nav.mitrayReferral',
+        icon: 'users',
+        to: '/admin/mitray-referral',
+        permission: 'stats:read',
+      },
       {
         name: 'admin.nav.partners',
         icon: 'handshake',

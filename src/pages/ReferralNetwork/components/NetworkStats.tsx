@@ -1,12 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { StatCard } from '@/components/stats';
-import {
-  BanknotesIcon,
-  CampaignIcon,
-  PartnerIcon,
-  UsersIcon,
-  WalletIcon,
-} from '@/components/icons';
+import { BanknotesIcon, CampaignIcon, PartnerIcon, UsersIcon } from '@/components/icons';
 import type { NetworkGraphData } from '@/types/referralNetwork';
 import { formatKopeksToRubles } from '../utils';
 
@@ -47,14 +41,7 @@ export function NetworkStats({ data, className }: NetworkStatsProps) {
           icon={<BanknotesIcon className="h-5 w-5" />}
           tone="accent"
         />
-        <div className="col-span-2">
-          <StatCard
-            label={t('admin.referralNetwork.stats.totalEarnings')}
-            value={`${formatKopeksToRubles(data.total_earnings_kopeks)} ₽`}
-            icon={<WalletIcon className="h-5 w-5" />}
-            tone="neutral"
-          />
-        </div>
+        {/* Mitray: рублёвый «заработок рефералов» убран — v3 живёт днями */}
       </div>
     </div>
   );
